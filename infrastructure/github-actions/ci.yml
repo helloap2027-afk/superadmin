@@ -1,0 +1,42 @@
+name: HELLO Platform CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+          run_install: false
+
+      - name: Install Monorepo Dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: hello-platform
+
+      - name: Run Typecheck across Monorepo
+        run: pnpm turbo run typecheck
+        working-directory: hello-platform
+
+      - name: Run Automated Test Suites
+        run: pnpm turbo run test
+        working-directory: hello-platform
+
+      - name: Build Application Packages
+        run: pnpm turbo run build
+        working-directory: hello-platform
+
