@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { 
   Search, MapPin, ChevronDown, Plus, User, Sparkles, Navigation, X, 
   ShieldCheck, Mic, Camera, LocateFixed, Zap, Bell, Target, Store, Compass
@@ -285,15 +286,34 @@ export function DesktopHeader({
             </span>
           </button>
 
-          {/* User Profile Pill Button (SparkleSmart Ele... ▾) */}
-          <button
-            onClick={onOpenLogin}
-            className="bg-[#0F172A] hover:bg-slate-800 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xs transition"
-          >
-            <div className="w-2 h-2 rounded-full bg-[#FF6B35]" />
-            <span className="max-w-[120px] truncate">{userName}</span>
-            <ChevronDown className="w-3 h-3 text-slate-400" />
-          </button>
+          {/* User Profile / Login & Register Actions */}
+          {isLoggedIn ? (
+            <Link
+              href="/account"
+              className="bg-[#0F172A] hover:bg-slate-800 text-white px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xs transition border border-slate-700"
+              title="View Account Profile"
+            >
+              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="max-w-[120px] truncate">{userName || "Account"}</span>
+              <ChevronDown className="w-3 h-3 text-slate-400" />
+            </Link>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <Link
+                href="/login"
+                className="bg-[#0076D7] hover:bg-[#005FAE] text-white px-3.5 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 shadow-xs transition hover:shadow-md"
+              >
+                <User className="w-3.5 h-3.5" />
+                <span>Login</span>
+              </Link>
+              <Link
+                href="/register"
+                className="border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 px-3 py-1.5 rounded-full text-xs font-bold transition shadow-2xs hidden sm:inline-flex items-center"
+              >
+                <span>Register</span>
+              </Link>
+            </div>
+          )}
         </div>
 
       </div>

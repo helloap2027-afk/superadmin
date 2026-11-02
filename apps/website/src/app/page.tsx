@@ -89,8 +89,29 @@ function HomeExploreContent() {
   const [loginOtp, setLoginOtp] = useState("");
   const [loginOtpSent, setLoginOtpSent] = useState(false);
   const [loginChallengeId, setLoginChallengeId] = useState("");
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const [userName, setUserName] = useState("SparkleSmart Ele...");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("");
+
+  // Read authenticated session from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("hello_access_token");
+      const savedUserStr = localStorage.getItem("hello_user");
+      if (token) {
+        setIsLoggedIn(true);
+        if (savedUserStr) {
+          try {
+            const parsed = JSON.parse(savedUserStr);
+            setUserName(parsed.fullName || "Verified User");
+          } catch {
+            setUserName("Verified User");
+          }
+        } else {
+          setUserName("Verified User");
+        }
+      }
+    }
+  }, []);
 
   // Active Category Data Object
   const currentCategoryObj = useMemo(() => {

@@ -385,8 +385,146 @@ export default function MobileAppSimulator() {
   const [enquirySuccessRef, setEnquirySuccessRef] = useState<string | null>(null);
   const [enquiryMessage, setEnquiryMessage] = useState("");
   const [customerPhone, setCustomerPhone] = useState("+91 98480 77777");
-  const [customerName, setCustomerName] = useState("Vikram");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Live Auth & Database State
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
+  const [authStep, setAuthStep] = useState<"phone" | "otp">("phone");
+  const [authPhone, setAuthPhone] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authLang, setAuthLang] = useState("English");
+  const [authOtp, setAuthOtp] = useState("");
+  const [authChallengeId, setAuthChallengeId] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [showRawDbJson, setShowRawDbJson] = useState(false);
+
+  // Load user session on mount
+  useEffect(() => {
+    const savedToken = typeof window !== "undefined" ? localStorage.getItem("hello_mobile_token") : null;
+    if (savedToken) {
+      fetch(`${API_BASE}/users/me`, {
+        headers: { Authorization: `Bearer ${savedToken}` }
+      })
+        .then((res) => res.json())
+        .then((json) => {
+          if (json.success && json.data) setCurrentUser(json.data);
+        })
+        .catch(() => {});
+    }
+  }, []);
+
+  const handleSendMobileOtp = async () => {
+    const cleanPhone = authPhone.replace(/\D/g, "");
+    if (cleanPhone.length !== 10) {
+      setAuthError("Please enter a valid 10-digit Indian phone number.");
+      return;
+    }
+    if (authTab === "register" && !authName.trim()) {
+      setAuthError("Please enter your Full Name to register.");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      const fullPhone = `+91${cleanPhone}`;
+      const res = await fetch(`${API_BASE}/auth/otp/request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phoneNumber: fullPhone,
+          purpose: authTab === "register" ? "REGISTRATION" : "CUSTOMER_LOGIN"
+        })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "Failed to dispatch OTP code.");
+
+      setAuthChallengeId(json.data.challengeId);
+      setAuthStep("otp");
+    } catch (err: any) {
+      setAuthError(err.message || "Connection error to API engine.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleVerifyMobileOtp = async () => {
+    if (authOtp.length !== 6) {
+      setAuthError("Please enter the complete 6-digit code.");
+      return;
+    }
+
+    setAuthLoading(true);
+    setAuthError(null);
+
+    try {
+      const res = await fetch(`${API_BASE}/auth/otp/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          challengeId: authChallengeId,
+          otp: authOtp,
+          deviceInfo: "HELLO Mobile Web Simulator (Port 3002)"
+        })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "Invalid or expired OTP.");
+
+      const token = json.data.accessToken;
+      if (typeof window !== "undefined") {
+        localStorage.setItem("hello_mobile_token", token);
+      }
+
+      // If registered, persist profile updates to database
+      if (authTab === "register" && authName.trim()) {
+        try {
+          await fetch(`${API_BASE}/users/me`, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              fullName: authName.trim(),
+              email: authEmail.trim() || undefined,
+              preferredLanguage: authLang
+            })
+          });
+        } catch {}
+      }
+
+      // Query database for fresh user entity
+      const profileRes = await fetch(`${API_BASE}/users/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const profileJson = await profileRes.json();
+      const freshUser = profileJson?.data || json.data.user;
+
+      setCurrentUser(freshUser);
+      setAuthModalOpen(false);
+      setAuthStep("phone");
+      setAuthOtp("");
+      setAuthPhone("");
+      setAuthName("");
+      setActiveTab("Profile");
+    } catch (err: any) {
+      setAuthError(err.message || "Verification failed.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleMobileSignOut = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("hello_mobile_token");
+    }
+    setCurrentUser(null);
+  };
 
   // My Enquiries history
   const [myEnquiries, setMyEnquiries] = useState<any[]>([
@@ -505,7 +643,7 @@ export default function MobileAppSimulator() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           businessId: enquiryModalBiz.id,
-          customerName: customerName || "Mobile User",
+          customerName: currentUser?.fullName || "Mobile User",
           customerPhone: customerPhone,
           message: enquiryMessage || `Instant mobile quote request for ${enquiryModalBiz.name}`,
           priority: "HIGH"
@@ -670,41 +808,115 @@ export default function MobileAppSimulator() {
               </div>
             </div>
           ) : activeTab === "Profile" ? (
-            /* ================= PROFILE TAB ================= */
+            /* ================= PROFILE TAB (LIVE DB IDENTITY) ================= */
             <div className="p-4 space-y-4">
-              <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center space-y-2 shadow-xs">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#0076D7] to-[#FF6B35] text-white flex items-center justify-center mx-auto text-xl font-bold shadow-md">
-                  V
-                </div>
-                <h4 className="text-sm font-black text-slate-900">Vikram (Customer)</h4>
-                <div className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  <ShieldCheck className="w-3 h-3 text-emerald-600" /> +91 98480 77777 (Verified)
-                </div>
-              </div>
+              {currentUser ? (
+                <>
+                  <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center space-y-2 shadow-xs">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#0076D7] to-sky-400 text-white flex items-center justify-center mx-auto text-xl font-bold shadow-md">
+                      {currentUser?.fullName?.charAt(0) || "U"}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">{currentUser.fullName}</h4>
+                      <p className="text-[11px] text-slate-500">{currentUser.phoneNumber} {currentUser.email ? `• ${currentUser.email}` : ""}</p>
+                    </div>
+                    <div className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified in SQLite Database
+                    </div>
+                  </div>
 
-              <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-3 text-xs shadow-xs">
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-600">Active City</span>
-                  <span className="font-bold text-slate-900">{selectedCity} ({selectedLocality})</span>
+                  {/* Real Database Fields Grid */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2.5 text-xs shadow-xs">
+                    <h5 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Database Record Attributes</h5>
+                    <div className="grid grid-cols-2 gap-2 text-[11px]">
+                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                        <span className="text-[9px] text-slate-400 block font-bold">USER ID</span>
+                        <span className="font-mono text-slate-800 font-bold truncate block">{currentUser.id}</span>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                        <span className="text-[9px] text-slate-400 block font-bold">STATUS</span>
+                        <span className="text-emerald-600 font-bold block">{currentUser.status}</span>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                        <span className="text-[9px] text-slate-400 block font-bold">LANGUAGE</span>
+                        <span className="text-slate-800 font-bold block">{currentUser.preferredLanguage || "English"}</span>
+                      </div>
+                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                        <span className="text-[9px] text-slate-400 block font-bold">ROLES</span>
+                        <span className="text-[#0076D7] font-bold block">{Array.isArray(currentUser.roles) ? currentUser.roles.join(", ") : "CUSTOMER"}</span>
+                      </div>
+                    </div>
+
+                    <div className="pt-2">
+                      <button
+                        onClick={() => setShowRawDbJson(!showRawDbJson)}
+                        className="text-[11px] font-bold text-[#0076D7] hover:underline"
+                      >
+                        {showRawDbJson ? "▼ Hide SQL Table Entity" : "▶ View Raw Database SQL Entity"}
+                      </button>
+                      {showRawDbJson && (
+                        <pre className="mt-2 p-2.5 bg-slate-900 rounded-xl text-[10px] font-mono text-emerald-400 overflow-x-auto leading-relaxed border border-slate-800">
+                          {JSON.stringify(currentUser, null, 2)}
+                        </pre>
+                      )}
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                      <button
+                        onClick={handleMobileSignOut}
+                        className="text-xs font-bold text-red-600 hover:text-red-700"
+                      >
+                        Sign Out Session
+                      </button>
+                      <button
+                        onClick={() => setMode("vendor")}
+                        className="text-xs font-bold text-[#FF6B35] hover:underline"
+                      >
+                        Switch to Vendor Mode →
+                      </button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Unauthenticated View */
+                <div className="space-y-4">
+                  <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center space-y-3 shadow-xs">
+                    <div className="w-14 h-14 rounded-2xl bg-blue-50 text-[#0076D7] flex items-center justify-center mx-auto text-xl font-bold border border-blue-100">
+                      <User className="w-7 h-7 text-[#0076D7]" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-900">Sign In or Register</h4>
+                      <p className="text-[11px] text-slate-500">Access verified enquiries, your registered database identity, and vendor controls.</p>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        onClick={() => { setAuthTab("login"); setAuthModalOpen(true); }}
+                        className="flex-1 bg-[#0076D7] hover:bg-[#005FAE] text-white py-2.5 rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
+                      >
+                        <User className="w-3.5 h-3.5" />
+                        <span>Login</span>
+                      </button>
+                      <button
+                        onClick={() => { setAuthTab("register"); setAuthModalOpen(true); }}
+                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 py-2.5 rounded-xl text-xs font-bold transition border border-slate-200 flex items-center justify-center gap-1.5"
+                      >
+                        <span>Register</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50/60 rounded-2xl border border-blue-100 p-3.5 text-xs text-blue-900 space-y-1">
+                    <span className="font-bold flex items-center gap-1.5 text-blue-800">
+                      <ShieldCheck className="w-4 h-4 text-[#0076D7]" />
+                      Real Database Persistence
+                    </span>
+                    <p className="text-[11px] text-blue-700/90 leading-relaxed">
+                      Registration stores relational records directly in SQLite / MariaDB (`users` & `otp_challenges` tables) with rate limits and cryptographic hashing.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-600">Account Role</span>
-                  <span className="font-bold text-[#0076D7]">Customer Mode</span>
-                </div>
-                <div className="flex items-center justify-between py-1 border-b border-slate-100">
-                  <span className="text-slate-600">Available Services</span>
-                  <span className="font-bold text-slate-800">14 Categories</span>
-                </div>
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-slate-600">Business Management</span>
-                  <button 
-                    onClick={() => setMode("vendor")}
-                    className="text-[#FF6B35] font-bold hover:underline"
-                  >
-                    Switch to Vendor Mode →
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           ) : mode === "customer" ? (
             /* ================= CUSTOMER MODE VIEW ================= */
@@ -753,14 +965,36 @@ export default function MobileAppSimulator() {
                   )}
                 </div>
 
-                <div 
-                  onClick={() => setActiveTab("Notifications")}
-                  className="relative p-1.5 rounded-full bg-slate-100 cursor-pointer"
-                >
-                  <Bell className="w-4 h-4 text-slate-700" />
-                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
-                    1
-                  </span>
+                <div className="flex items-center gap-2">
+                  {currentUser ? (
+                    <button
+                      onClick={() => setActiveTab("Profile")}
+                      className="flex items-center gap-1.5 bg-[#0F172A] hover:bg-slate-800 text-white px-2.5 py-1.5 rounded-full text-[11px] font-bold shadow-xs transition"
+                      title="View Profile"
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="max-w-[75px] truncate">{currentUser.fullName?.split(" ")[0] || "Profile"}</span>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setAuthTab("login"); setAuthModalOpen(true); }}
+                      className="bg-[#0076D7] hover:bg-[#005FAE] text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs transition hover:shadow-md"
+                      title="Login or Register"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>Login</span>
+                    </button>
+                  )}
+
+                  <div 
+                    onClick={() => setActiveTab("Notifications")}
+                    className="relative p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+                  >
+                    <Bell className="w-4 h-4 text-slate-700" />
+                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
+                      1
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1134,7 +1368,7 @@ export default function MobileAppSimulator() {
             className={`flex flex-col items-center gap-0.5 ${activeTab === "Profile" ? "text-[#0076D7]" : "text-slate-400"}`}
           >
             <User className="w-4 h-4" />
-            <span className="text-[9px] font-medium">Profile</span>
+            <span className="text-[9px] font-medium">{currentUser ? "Profile" : "Login"}</span>
           </button>
         </nav>
 
@@ -1200,6 +1434,164 @@ export default function MobileAppSimulator() {
                     )}
                   </button>
                 </form>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* In-App Authentication & Registration Modal */}
+        {authModalOpen && (
+          <div className="absolute inset-0 bg-black/70 z-50 flex flex-col justify-end">
+            <div className="bg-white rounded-t-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">
+                    {authTab === "register" ? "Create Customer Account" : "Sign In to HELLO"}
+                  </h4>
+                  <p className="text-[10px] text-slate-500">Connected directly to backend SQLite database</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setAuthModalOpen(false);
+                    setAuthStep("phone");
+                    setAuthError(null);
+                  }}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Dual Toggle Pill */}
+              {authStep === "phone" && (
+                <div className="flex items-center p-1 bg-slate-100 rounded-xl">
+                  <button
+                    onClick={() => { setAuthTab("login"); setAuthError(null); }}
+                    className={`flex-1 py-1.5 text-center text-xs font-bold rounded-lg transition ${
+                      authTab === "login" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-500"
+                    }`}
+                  >
+                    Sign In
+                  </button>
+                  <button
+                    onClick={() => { setAuthTab("register"); setAuthError(null); }}
+                    className={`flex-1 py-1.5 text-center text-xs font-bold rounded-lg transition ${
+                      authTab === "register" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-500"
+                    }`}
+                  >
+                    Register Account
+                  </button>
+                </div>
+              )}
+
+              {authError && (
+                <div className="p-2.5 rounded-xl bg-red-50 text-red-700 text-[11px] border border-red-200">
+                  {authError}
+                </div>
+              )}
+
+              {authStep === "phone" ? (
+                <div className="space-y-3">
+                  {authTab === "register" && (
+                    <>
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-1">Full Name *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Ramesh Kumar"
+                          value={authName}
+                          onChange={(e) => setAuthName(e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0076D7]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-1">Email (Optional)</label>
+                        <input
+                          type="email"
+                          placeholder="e.g. ramesh@example.com"
+                          value={authEmail}
+                          onChange={(e) => setAuthEmail(e.target.value)}
+                          className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0076D7]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-1">Language</label>
+                        <div className="flex gap-2">
+                          {["English", "Telugu", "Hindi"].map((lang) => (
+                            <button
+                              key={lang}
+                              type="button"
+                              onClick={() => setAuthLang(lang)}
+                              className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition ${
+                                authLang === lang
+                                  ? "bg-[#0076D7] text-white border-[#0076D7]"
+                                  : "bg-slate-50 text-slate-600 border-slate-200"
+                              }`}
+                            >
+                              {lang}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-700 block mb-1">Mobile Number *</label>
+                    <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:border-[#0076D7]">
+                      <span className="bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 border-r border-slate-200">+91</span>
+                      <input
+                        type="text"
+                        placeholder="9848012345"
+                        maxLength={10}
+                        value={authPhone}
+                        onChange={(e) => setAuthPhone(e.target.value.replace(/\D/g, ""))}
+                        className="flex-1 px-3 py-2 text-xs focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleSendMobileOtp}
+                    disabled={authLoading}
+                    className="w-full bg-[#0076D7] hover:bg-[#005FAE] disabled:bg-slate-300 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
+                  >
+                    {authLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Send 6-Digit OTP</span>}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-slate-500">
+                    Enter the 6-digit code dispatched to <span className="font-bold text-slate-800">+91 {authPhone}</span>
+                  </p>
+
+                  <input
+                    type="text"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={authOtp}
+                    onChange={(e) => setAuthOtp(e.target.value.replace(/\D/g, ""))}
+                    className="w-full border-2 border-[#0076D7] rounded-xl px-4 py-2.5 text-center text-lg font-mono font-bold tracking-widest focus:outline-none"
+                    autoFocus
+                  />
+
+                  <button
+                    onClick={handleVerifyMobileOtp}
+                    disabled={authLoading || authOtp.length !== 6}
+                    className="w-full bg-[#16A34A] hover:bg-[#15803D] disabled:bg-slate-300 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
+                  >
+                    {authLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Verify OTP & Save to Database</span>}
+                  </button>
+
+                  <button
+                    onClick={() => setAuthStep("phone")}
+                    className="w-full text-center text-[10px] text-slate-400 hover:text-slate-600 font-semibold"
+                  >
+                    Change Phone Number
+                  </button>
+                </div>
               )}
             </div>
           </div>
