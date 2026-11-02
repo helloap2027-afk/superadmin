@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { ToastProvider } from "@/components/ToastProvider";
 
 export const metadata: Metadata = {
   title: "HELLO — Discover Local. Connect Instantly.",
@@ -13,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-[#F8FAFC]">{children}</body>
+      <body className="antialiased min-h-screen bg-[#F8FAFC]">
+        <ToastProvider defaultPosition="top-right">
+          {children}
+        </ToastProvider>
+      </body>
     </html>
   );
 }

@@ -8,6 +8,7 @@ import { DesktopBizCard, BusinessItemCard } from "@/components/DesktopBizCard";
 import { DesktopRightSidebar } from "@/components/DesktopRightSidebar";
 import { DesktopFooter } from "@/components/DesktopFooter";
 import { AP_EXPLORE_CATEGORIES, CuratedCollection } from "@/data/exploreData";
+import { useToast } from "@/components/ToastProvider";
 import { 
   Send, X, CheckCircle, Clock, MapPin, Phone, MessageSquare, 
   Sparkles, Loader2, Star, ShieldCheck, Plus, Building2, 
@@ -106,6 +107,7 @@ const CATEGORY_PRESET_IMAGES: Record<string, string[]> = {
 };
 
 function HomeExploreContent() {
+  const { showToast } = useToast();
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category");
   const initialCityParam = searchParams.get("city")?.toLowerCase();
@@ -974,7 +976,11 @@ function HomeExploreContent() {
               </div>
               <div className="grid grid-cols-3 gap-2.5 pt-1">
                 <div 
-                  onClick={() => alert("✈️ Airfare Search: Direct connectivity from Vijayawada Airport (VGA) & Hyderabad (HYD)")}
+                  onClick={() => showToast({
+                    type: "info",
+                    title: "Airfare Bookings",
+                    message: "Direct connectivity from Vijayawada Airport (VGA) & Hyderabad (HYD). Lowest fares guaranteed.",
+                  })}
                   className="bg-white/10 hover:bg-white/20 p-3 rounded-xl cursor-pointer transition border border-white/10 text-center space-y-1"
                 >
                   <Plane className="w-5 h-5 mx-auto text-blue-300" />
@@ -982,7 +988,11 @@ function HomeExploreContent() {
                   <span className="text-[10px] text-slate-300">From ₹2,499</span>
                 </div>
                 <div 
-                  onClick={() => alert("🚖 Outstation Cabs: Round-trip & One-way cabs from Vijayawada & Guntur to Hyderabad, Tirupati, Vizag")}
+                  onClick={() => showToast({
+                    type: "info",
+                    title: "Outstation Cabs",
+                    message: "Round-trip & One-way cabs from Vijayawada & Guntur to Hyderabad, Tirupati, Vizag.",
+                  })}
                   className="bg-white/10 hover:bg-white/20 p-3 rounded-xl cursor-pointer transition border border-white/10 text-center space-y-1"
                 >
                   <Car className="w-5 h-5 mx-auto text-amber-300" />
@@ -990,7 +1000,11 @@ function HomeExploreContent() {
                   <span className="text-[10px] text-slate-300">₹11/km onwards</span>
                 </div>
                 <div 
-                  onClick={() => alert("🚆 Train Bookings: PNR status, live running tracking & fast Tatkal alert updates")}
+                  onClick={() => showToast({
+                    type: "info",
+                    title: "Train & Bus Bookings",
+                    message: "Live PNR status, running tracking & Tatkal ticket alerts in Andhra Pradesh.",
+                  })}
                   className="bg-white/10 hover:bg-white/20 p-3 rounded-xl cursor-pointer transition border border-white/10 text-center space-y-1"
                 >
                   <Train className="w-5 h-5 mx-auto text-emerald-300" />
@@ -1789,7 +1803,11 @@ function HomeExploreContent() {
         }`}
       >
         <div 
-          onClick={() => alert("📱 Download Hello-Hi Android App on Google Play Store")}
+          onClick={() => showToast({
+            type: "success",
+            title: "Google Play Store",
+            message: "Redirecting to download Hello-Hi Android App on Google Play...",
+          })}
           className="bg-[#0B1220] hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition flex items-center gap-2.5 select-none hover:scale-105 active:scale-95 group"
           title="Download on Google Play Store"
         >
@@ -1819,7 +1837,11 @@ function HomeExploreContent() {
         </div>
 
         <div 
-          onClick={() => alert("🍎 Download Hello-Hi iOS App on Apple App Store")}
+          onClick={() => showToast({
+            type: "info",
+            title: "Apple App Store",
+            message: "Redirecting to download Hello-Hi iOS App on Apple App Store...",
+          })}
           className="bg-[#0B1220] hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition flex items-center gap-2.5 select-none hover:scale-105 active:scale-95 group"
           title="Download on Apple App Store"
         >

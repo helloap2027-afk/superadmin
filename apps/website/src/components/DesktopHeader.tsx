@@ -7,6 +7,7 @@ import {
   ShieldCheck, Mic, Camera, LocateFixed, Zap, Bell, Target, Store, Compass
 } from "lucide-react";
 import { AP_EXPLORE_CATEGORIES } from "../data/exploreData";
+import { useToast } from "./ToastProvider";
 
 export interface DesktopHeaderProps {
   selectedCity: "Hyderabad" | "Vijayawada" | "Guntur";
@@ -41,6 +42,7 @@ export function DesktopHeader({
   onDetectLiveGps,
   onOpenFastDeals,
 }: DesktopHeaderProps) {
+  const { showToast } = useToast();
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -93,12 +95,45 @@ export function DesktopHeader({
 
   const handleGpsClick = () => {
     setGpsDetecting(true);
-    setTimeout(() => {
-      setGpsDetecting(false);
-      setShowCityDropdown(false);
-      if (onDetectLiveGps) onDetectLiveGps();
-      alert(`📍 GPS Location Verified: Connected to ${selectedCity} Hyperlocal Gateway!`);
-    }, 600);
+    if (typeof navigator !== "undefined" && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setGpsDetecting(false);
+          setShowCityDropdown(false);
+          if (onDetectLiveGps) onDetectLiveGps();
+          showToast({
+            type: "location",
+            title: "GPS Location Verified",
+            message: `Connected to ${selectedCity} Hyperlocal Gateway! (${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)})`,
+            duration: 4000,
+          });
+        },
+        () => {
+          setGpsDetecting(false);
+          setShowCityDropdown(false);
+          if (onDetectLiveGps) onDetectLiveGps();
+          showToast({
+            type: "location",
+            title: "GPS Location Verified",
+            message: `Connected to ${selectedCity} Hyperlocal Gateway!`,
+            duration: 3500,
+          });
+        },
+        { timeout: 3000 }
+      );
+    } else {
+      setTimeout(() => {
+        setGpsDetecting(false);
+        setShowCityDropdown(false);
+        if (onDetectLiveGps) onDetectLiveGps();
+        showToast({
+          type: "location",
+          title: "GPS Location Verified",
+          message: `Connected to ${selectedCity} Hyperlocal Gateway!`,
+          duration: 3500,
+        });
+      }, 500);
+    }
   };
 
   return (
@@ -293,7 +328,11 @@ export function DesktopHeader({
           </button>
 
           <button 
-            onClick={() => alert("🏬 B2B Wholesale Mart: Verified bulk industrial and IT suppliers in Hyderabad")}
+            onClick={() => showToast({
+              type: "info",
+              title: "B2B Wholesale Mart",
+              message: `Verified bulk industrial and IT suppliers in ${selectedCity}.`,
+            })}
             className="text-xs font-bold text-slate-700 hover:text-slate-900 transition hidden xl:flex items-center gap-1"
           >
             <Store className="w-3.5 h-3.5 text-slate-500" />
@@ -311,7 +350,11 @@ export function DesktopHeader({
 
           {/* Notification Bell with Badge */}
           <button 
-            onClick={() => alert("🔔 Notifications: 1 New fast quote received in Hitec City!")}
+            onClick={() => showToast({
+              type: "info",
+              title: "Instant Notification",
+              message: `1 New fast quote received in ${selectedLocality || selectedCity}!`,
+            })}
             className="relative p-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 transition"
           >
             <Bell className="w-4 h-4" />
