@@ -54,7 +54,7 @@ export function DesktopFilterSidebar({
   const isAllListings = !verifiedOnly && !openNowOnly && !dealsOnly && !minRating;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs space-y-5 sticky top-28">
+    <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm space-y-5 max-h-[calc(100vh-7.5rem)] overflow-y-auto overscroll-contain">
       
       {/* 1. Header: Filters + Results Count + Reset All */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">

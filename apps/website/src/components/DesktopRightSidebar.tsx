@@ -52,7 +52,7 @@ export function DesktopRightSidebar({
   };
 
   return (
-    <div className="space-y-4 sticky top-28">
+    <div className="space-y-4 max-h-[calc(100vh-7.5rem)] overflow-y-auto overscroll-contain">
       
       {/* 1. INSTANT BEST DEAL QUOTES CARD (Matching Screenshot) */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3.5">
