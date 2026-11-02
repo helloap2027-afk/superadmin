@@ -1101,9 +1101,9 @@ export default function MobileAppSimulator() {
                   </button>
                 </div>
 
-                {/* 4-Column Grid of 8 Featured from the 14 */}
+                {/* 4-Column Grid of All 14 Categories */}
                 <div className="grid grid-cols-4 gap-2 text-center">
-                  {ALL_14_SERVICES.slice(0, 8).map((srv) => {
+                  {ALL_14_SERVICES.map((srv) => {
                     const isSelected = selectedCategory === srv.slug;
                     return (
                       <div

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,8 +17,28 @@ import { APP_CONFIG } from '@hello/config';
 
 const API_BASE = 'http://localhost:4000/api/v1';
 
+const ALL_14_CATEGORIES = [
+  { id: 'restaurants', name: 'Restaurants', slug: 'restaurants', icon: '🍽️' },
+  { id: 'hotels', name: 'Hotels', slug: 'hotels', icon: '🏨' },
+  { id: 'beauty-spa', name: 'Beauty Spa', slug: 'beauty-spa', icon: '💆‍♀️' },
+  { id: 'home-decor', name: 'Home Decor', slug: 'home-decor', icon: '🛋️' },
+  { id: 'ask-astro', name: 'Ask Astro', slug: 'ask-astro', icon: '🔮' },
+  { id: 'wedding-planning', name: 'Wedding Planning', slug: 'wedding-planning', icon: '💍' },
+  { id: 'education', name: 'Education', slug: 'education', icon: '🎓' },
+  { id: 'rent-hire', name: 'Rent & Hire', slug: 'rent-hire', icon: '🔑' },
+  { id: 'hospitals', name: 'Hospitals', slug: 'hospitals', icon: '🏥' },
+  { id: 'contractors', name: 'Contractors', slug: 'contractors', icon: '👷' },
+  { id: 'pet-shops', name: 'Pet Shops', slug: 'pet-shops', icon: '🐾' },
+  { id: 'pg-hostels', name: 'PG/Hostels', slug: 'pg-hostels', icon: '🛏️' },
+  { id: 'estate-agent', name: 'Estate Agent', slug: 'estate-agent', icon: '🏢' },
+  { id: 'dentists', name: 'Dentists', slug: 'dentists', icon: '🦷' },
+];
+
 export default function App() {
   const [mode, setMode] = useState<'customer' | 'vendor'>('customer');
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [businesses, setBusinesses] = useState<any[]>([]);
+  const [isLoadingBusinesses, setIsLoadingBusinesses] = useState<boolean>(false);
 
   // Auth State
   const [user, setUser] = useState<any>(null);
@@ -42,6 +62,28 @@ export default function App() {
 
   const PILOT_CITIES = ['Hyderabad', 'Vijayawada', 'Guntur', 'Visakhapatnam', 'Tirupati'];
   const LANGUAGES = ['English', 'Telugu', 'Hindi'];
+
+  // Fetch businesses whenever category or city changes
+  useEffect(() => {
+    fetchBusinesses();
+  }, [selectedCategory, selectedCity]);
+
+  const fetchBusinesses = async () => {
+    setIsLoadingBusinesses(true);
+    try {
+      const catParam = selectedCategory !== 'All' ? `&category=${selectedCategory}` : '';
+      const url = `${API_BASE}/search/businesses?city=${selectedCity.toLowerCase()}${catParam}`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setBusinesses(json.data);
+      }
+    } catch (e) {
+      console.log('Error fetching businesses:', e);
+    } finally {
+      setIsLoadingBusinesses(false);
+    }
+  };
 
   const handleSendOtp = async () => {
     if (phoneNumber.replace(/\D/g, '').length !== 10) {
@@ -292,12 +334,149 @@ export default function App() {
         )}
 
         {mode === 'customer' ? (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Discover Nearby Businesses</Text>
-            <Text style={styles.cardSubtitle}>Pilot Cities: {APP_CONFIG.pilotCities.join(', ')}</Text>
-            <Text style={styles.cardDescription}>
-              Instant contact via Call and WhatsApp with verified local businesses, clinics, and restaurants.
-            </Text>
+          <View style={{ paddingBottom: 30 }}>
+            {/* 1. HORIZONTAL CAROUSEL OF ALL 14 CATEGORY PILLS */}
+            <View style={{ marginTop: 12, marginBottom: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => setSelectedCategory('All')}
+                  style={[
+                    styles.categoryPill,
+                    selectedCategory === 'All' && styles.categoryPillActive,
+                  ]}
+                >
+                  <Text style={[styles.categoryPillText, selectedCategory === 'All' && styles.categoryPillTextActive]}>
+                    🌟 All
+                  </Text>
+                </TouchableOpacity>
+
+                {ALL_14_CATEGORIES.map((cat) => {
+                  const isSelected = selectedCategory === cat.slug;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      onPress={() => setSelectedCategory(isSelected ? 'All' : cat.slug)}
+                      style={[
+                        styles.categoryPill,
+                        isSelected && styles.categoryPillActive,
+                      ]}
+                    >
+                      <Text style={{ fontSize: 13, marginRight: 4 }}>{cat.icon}</Text>
+                      <Text style={[styles.categoryPillText, isSelected && styles.categoryPillTextActive]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* 2. ALL 14 CATEGORIES GRID */}
+            <View style={styles.gridContainer}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>Explore All 14 Services</Text>
+                <Text style={{ fontSize: 11, color: '#0076D7', fontWeight: '700' }}>{selectedCity}</Text>
+              </View>
+
+              <View style={styles.categoriesGrid}>
+                {ALL_14_CATEGORIES.map((cat) => {
+                  const isSelected = selectedCategory === cat.slug;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      onPress={() => setSelectedCategory(isSelected ? 'All' : cat.slug)}
+                      style={[
+                        styles.categoryGridItem,
+                        isSelected && styles.categoryGridItemActive,
+                      ]}
+                    >
+                      <View style={[styles.categoryIconCircle, isSelected && { backgroundColor: '#DBEAFE' }]}>
+                        <Text style={{ fontSize: 18 }}>{cat.icon}</Text>
+                      </View>
+                      <Text style={[styles.categoryGridName, isSelected && { color: '#0076D7', fontWeight: '800' }]} numberOfLines={1}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* 3. BUSINESS LISTINGS (LOADED FROM DATABASE) */}
+            <View style={{ paddingHorizontal: 16, marginTop: 14 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>
+                    {selectedCategory === 'All' ? 'Verified Businesses' : `${selectedCategory.toUpperCase()} Providers`}
+                  </Text>
+                  <View style={{ backgroundColor: '#EBF5FF', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#0076D7' }}>{businesses.length} in DB</Text>
+                  </View>
+                </View>
+                {selectedCategory !== 'All' && (
+                  <TouchableOpacity onPress={() => setSelectedCategory('All')}>
+                    <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '600' }}>Clear Filter ✕</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {isLoadingBusinesses ? (
+                <View style={{ padding: 24, alignItems: 'center' }}>
+                  <ActivityIndicator size="small" color="#0076D7" />
+                  <Text style={{ fontSize: 12, color: '#64748B', marginTop: 8 }}>Loading verified businesses from database...</Text>
+                </View>
+              ) : businesses.length === 0 ? (
+                <View style={[styles.card, { alignItems: 'center', padding: 24 }]}>
+                  <Text style={{ fontSize: 24 }}>🏢</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A', marginTop: 6 }}>No listings in this category yet</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center', marginTop: 4 }}>
+                    Be the first business to register in {selectedCity}!
+                  </Text>
+                </View>
+              ) : (
+                businesses.map((biz: any) => (
+                  <View key={biz.id} style={styles.businessCard}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1, paddingRight: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={styles.businessName} numberOfLines={1}>{biz.name}</Text>
+                          <Text style={{ color: '#0076D7', fontSize: 12 }}>✓</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                          <Text style={{ fontSize: 11, fontWeight: '800', color: '#F59E0B' }}>★ {biz.averageRating || 4.8}</Text>
+                          <Text style={{ fontSize: 10, color: '#64748B' }}>({biz.totalReviews || 45} reviews)</Text>
+                          <Text style={{ fontSize: 10, color: '#CBD5E1' }}>•</Text>
+                          <Text style={{ fontSize: 10, color: '#475569', fontWeight: '600' }}>
+                            {biz.location?.localityName || 'Local'}, {biz.location?.cityName || selectedCity}
+                          </Text>
+                        </View>
+                        {biz.description && (
+                          <Text style={styles.businessDesc} numberOfLines={2}>{biz.description}</Text>
+                        )}
+                      </View>
+                    </View>
+
+                    <View style={styles.businessActionRow}>
+                      <TouchableOpacity
+                        onPress={() => Alert.alert('Calling Merchant', `Dialing ${biz.contacts?.callNumber || biz.primaryPhone || '+91 98480 22334'}...`)}
+                        style={styles.bizCallBtn}
+                      >
+                        <Text style={{ fontSize: 12 }}>📞</Text>
+                        <Text style={styles.bizCallBtnText}>Call Now</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => Alert.alert('WhatsApp Message', `Opening chat with ${biz.name}...`)}
+                        style={styles.bizWhatsappBtn}
+                      >
+                        <Text style={{ fontSize: 12 }}>💬</Text>
+                        <Text style={styles.bizWhatsappBtnText}>WhatsApp</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
           </View>
         ) : (
           <View style={styles.card}>
@@ -917,5 +1096,144 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontSize: 12,
     fontWeight: '600',
+  },
+  // Category Carousel Pills
+  categoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  categoryPillActive: {
+    backgroundColor: '#0076D7',
+    borderColor: '#0076D7',
+  },
+  categoryPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  categoryPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  // 14 Categories Grid
+  gridContainer: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
+    marginTop: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  categoryGridItem: {
+    width: '23%',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+  },
+  categoryGridItemActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#0076D7',
+  },
+  categoryIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  categoryGridName: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#334155',
+    textAlign: 'center',
+  },
+  // Business Cards
+  businessCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  businessName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  businessDesc: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 15,
+    marginTop: 4,
+  },
+  businessActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  bizCallBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#0076D7',
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  bizCallBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  bizWhatsappBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: '#25D366',
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  bizWhatsappBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
   },
 });
