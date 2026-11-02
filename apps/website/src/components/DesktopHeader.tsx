@@ -102,10 +102,10 @@ export function DesktopHeader({
   };
 
   return (
-    <header className="bg-white sticky top-0 z-40 border-b border-slate-200/90 shadow-2xs overflow-hidden w-full max-w-full">
+    <header className="bg-white sticky top-0 z-40 border-b border-slate-200/90 shadow-2xs w-full max-w-full">
       
       {/* 1. TOP MAIN WHITE NAVBAR (Matching Screenshot) */}
-      <div className="max-w-[1720px] mx-auto px-3 sm:px-4 lg:px-6 py-2.5 flex items-center justify-between gap-3">
+      <div className="max-w-[1720px] mx-auto px-3 sm:px-4 lg:px-6 py-2.5 flex items-center justify-between gap-3 relative z-30">
         
         {/* Left: Brand Logo + Location Selector + Detect GPS */}
         <div className="flex items-center gap-3">
@@ -134,7 +134,7 @@ export function DesktopHeader({
           </Link>
 
           {/* City & Locality Selector Pill */}
-          <div ref={cityDropdownRef} className="relative">
+          <div ref={cityDropdownRef} className="relative z-50">
             <button
               onClick={() => setShowCityDropdown(!showCityDropdown)}
               className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 transition text-left"
@@ -149,7 +149,7 @@ export function DesktopHeader({
             </button>
 
             {showCityDropdown && (
-              <div className="absolute left-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="absolute left-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-top-1 duration-150">
                 {/* 1. Auto-detect option in the header of the location dropdown */}
                 <button
                   onClick={handleGpsClick}
@@ -353,7 +353,7 @@ export function DesktopHeader({
       </div>
 
       {/* 2. CATEGORIES NAVIGATION RIBBON (Exact 14 Categories from Screenshot) */}
-      <div className="bg-white border-t border-slate-200/90 px-2 sm:px-3 lg:px-4 py-1.5 overflow-x-hidden no-scrollbar scrollbar-none shadow-2xs">
+      <div className="bg-white border-t border-slate-200/90 px-2 sm:px-3 lg:px-4 py-1.5 overflow-x-hidden no-scrollbar scrollbar-none shadow-2xs relative z-10">
         <div className="w-full max-w-[1720px] mx-auto flex items-center justify-between gap-1 text-[11px] xl:text-xs">
           {AP_EXPLORE_CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.slug;
