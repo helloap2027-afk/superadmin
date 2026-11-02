@@ -126,7 +126,12 @@ export default function App() {
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
     try {
-      const res = await fetch(`${API_BASE}/categories`);
+      const res = await fetch(`${API_BASE}/categories`, {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
       const json = await res.json();
       if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         setCategories(json.data.map((c: any) => ({
@@ -156,7 +161,12 @@ export default function App() {
       const catParam = selectedCategory !== 'All' ? `&category=${selectedCategory}` : '';
       const qParam = searchQuery.trim() ? `&q=${encodeURIComponent(searchQuery.trim())}` : '';
       const url = `${API_BASE}/search/businesses?city=${selectedCity.toLowerCase()}${catParam}${qParam}`;
-      const res = await fetch(url);
+      const res = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
+        }
+      });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setBusinesses(json.data);
