@@ -25,6 +25,61 @@ export function DesktopFooter() {
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span>DPDP Act 2023 Compliant</span>
             </div>
+
+            {/* Standard App Store & Play Store Download Badges */}
+            <div className="pt-2 space-y-2">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                Download Mobile App
+              </span>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Google Play */}
+                <a
+                  href="https://play.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#0B1220] hover:bg-black text-white px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition shadow-xs flex items-center gap-2 select-none group"
+                >
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0" fill="none">
+                    <path
+                      d="M3.609 1.813A2.083 2.083 0 0 0 3 3.327v17.346c0 .594.225 1.134.609 1.514l.08.074 9.715-9.715v-.228L3.689 1.739l-.08.074z"
+                      fill="#00D2FF"
+                    />
+                    <path
+                      d="M16.634 15.539l-3.23-3.23v-.228l3.23-3.23.073.042 3.829 2.176c1.093.621 1.093 1.637 0 2.258l-3.829 2.176-.073.046z"
+                      fill="#FFCE00"
+                    />
+                    <path
+                      d="M13.404 12.081l-9.795 9.795c.422.447 1.107.498 1.892.052l11.133-6.326-3.23-3.521z"
+                      fill="#FF3333"
+                    />
+                    <path
+                      d="M13.404 11.919l3.23-3.521L5.501 2.072C4.716 1.626 4.031 1.677 3.609 2.124l9.795 9.795z"
+                      fill="#00F076"
+                    />
+                  </svg>
+                  <div className="flex flex-col text-left leading-none">
+                    <span className="text-[7px] uppercase tracking-wider text-slate-400 font-semibold">GET IT ON</span>
+                    <span className="text-[11px] font-bold text-white group-hover:text-emerald-400 transition">Google Play</span>
+                  </div>
+                </a>
+
+                {/* App Store */}
+                <a
+                  href="https://apple.com/app-store"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#0B1220] hover:bg-black text-white px-3 py-1.5 rounded-lg border border-slate-700 hover:border-slate-500 transition shadow-xs flex items-center gap-2 select-none group"
+                >
+                  <svg viewBox="0 0 384 512" className="w-4 h-4 shrink-0 fill-current text-white group-hover:text-slate-200 transition">
+                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 66.2 30 148.8c14.7 39.4 39 88.5 76.5 89 33.7.6 44.2-22.3 84.7-22.3s50 22.3 84.7 21.7c37.5-.6 62.8-49.6 77.5-89 10.8-28.7 15.3-43.7 22.8-63.5-62-23.7-61.5-89.5-61.5-89.5zM250.7 94.6c15.2-19.2 25.5-45.7 22.7-72.6-22.5 1-49.6 15.2-65.7 34.4-14.2 16.8-26.7 44-23.4 70.3 25 .8 51.2-12.9 66.4-32.1z" />
+                  </svg>
+                  <div className="flex flex-col text-left leading-none">
+                    <span className="text-[7px] uppercase tracking-wider text-slate-400 font-semibold">Download on</span>
+                    <span className="text-[11px] font-bold text-white group-hover:text-blue-400 transition">App Store</span>
+                  </div>
+                </a>
+              </div>
+            </div>
           </div>
 
           {/* Col 2: AP Pilot Cities */}
@@ -63,6 +118,72 @@ export function DesktopFooter() {
             </ul>
           </div>
 
+        </div>
+
+        {/* Experience Hello-Hi on Mobile Banner */}
+        <div className="bg-[#111C2E] border border-slate-800 rounded-2xl p-5 flex flex-col md:flex-row items-center justify-between gap-5 shadow-inner">
+          <div className="space-y-1 text-center md:text-left">
+            <h4 className="text-sm font-black text-white flex items-center justify-center md:justify-start gap-2">
+              <span>Experience Hello-Hi on Mobile</span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                Free Download
+              </span>
+            </h4>
+            <p className="text-xs text-slate-400">
+              Get instant hyperlocal quotes, call verified providers, and track appointments directly from your phone.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
+            {/* Google Play Store Badge */}
+            <a
+              href="https://play.google.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[#0B1220] hover:bg-black text-white px-4 py-2 rounded-xl border border-slate-700 hover:border-slate-500 transition shadow-md flex items-center gap-3 select-none group"
+              title="Get it on Google Play"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none">
+                <path
+                  d="M3.609 1.813A2.083 2.083 0 0 0 3 3.327v17.346c0 .594.225 1.134.609 1.514l.08.074 9.715-9.715v-.228L3.689 1.739l-.08.074z"
+                  fill="#00D2FF"
+                />
+                <path
+                  d="M16.634 15.539l-3.23-3.23v-.228l3.23-3.23.073.042 3.829 2.176c1.093.621 1.093 1.637 0 2.258l-3.829 2.176-.073.046z"
+                  fill="#FFCE00"
+                />
+                <path
+                  d="M13.404 12.081l-9.795 9.795c.422.447 1.107.498 1.892.052l11.133-6.326-3.23-3.521z"
+                  fill="#FF3333"
+                />
+                <path
+                  d="M13.404 11.919l3.23-3.521L5.501 2.072C4.716 1.626 4.031 1.677 3.609 2.124l9.795 9.795z"
+                  fill="#00F076"
+                />
+              </svg>
+              <div className="flex flex-col text-left leading-tight">
+                <span className="text-[8px] uppercase tracking-wider text-slate-400 font-semibold">GET IT ON</span>
+                <span className="text-xs font-bold text-white group-hover:text-emerald-400 transition">Google Play</span>
+              </div>
+            </a>
+
+            {/* Apple App Store Badge */}
+            <a
+              href="https://apple.com/app-store"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-[#0B1220] hover:bg-black text-white px-4 py-2 rounded-xl border border-slate-700 hover:border-slate-500 transition shadow-md flex items-center gap-3 select-none group"
+              title="Download on the App Store"
+            >
+              <svg viewBox="0 0 384 512" className="w-5 h-5 shrink-0 fill-current text-white group-hover:text-slate-200 transition">
+                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 66.2 30 148.8c14.7 39.4 39 88.5 76.5 89 33.7.6 44.2-22.3 84.7-22.3s50 22.3 84.7 21.7c37.5-.6 62.8-49.6 77.5-89 10.8-28.7 15.3-43.7 22.8-63.5-62-23.7-61.5-89.5-61.5-89.5zM250.7 94.6c15.2-19.2 25.5-45.7 22.7-72.6-22.5 1-49.6 15.2-65.7 34.4-14.2 16.8-26.7 44-23.4 70.3 25 .8 51.2-12.9 66.4-32.1z" />
+              </svg>
+              <div className="flex flex-col text-left leading-tight">
+                <span className="text-[8px] uppercase tracking-wider text-slate-400 font-semibold">Download on the</span>
+                <span className="text-xs font-bold text-white group-hover:text-blue-400 transition">App Store</span>
+              </div>
+            </a>
+          </div>
         </div>
 
         {/* Bottom Bar */}
