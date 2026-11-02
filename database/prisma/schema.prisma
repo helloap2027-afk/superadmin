@@ -24,6 +24,8 @@ model User {
   fullName         String?      @map("full_name") @db.VarChar(100)
   email            String?      @unique(map: "uk_users_email") @db.VarChar(150)
   avatarUrl        String?      @map("avatar_url") @db.VarChar(512)
+  passwordHash     String?      @map("password_hash") @db.VarChar(255)
+  preferredLanguage String?     @default("English") @map("preferred_language") @db.VarChar(30)
   status           UserStatus   @default(ACTIVE)
   phoneVerifiedAt  DateTime?    @map("phone_verified_at")
   createdAt        DateTime     @default(now()) @map("created_at")

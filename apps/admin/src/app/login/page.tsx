@@ -28,6 +28,10 @@ export default function SuperAdminLoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [isMfaStep, setIsMfaStep] = useState(false);
+  const [mfaChallengeId, setMfaChallengeId] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -40,23 +44,89 @@ export default function SuperAdminLoginPage() {
     try {
       setIsLoading(true);
 
-      // Simulate authentication verification
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      const res = await fetch("http://localhost:4000/api/v1/admin/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          deviceInfo: "Super Admin Desktop Console",
+        }),
+      });
 
-      // Set admin session token
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Invalid administrator credentials.");
+      }
+
+      if (json.data?.requiresMfa) {
+        setMfaChallengeId(json.data.mfaChallengeId);
+        setIsMfaStep(true);
+        setIsLoading(false);
+        return;
+      }
+
+      // Store authentic admin session
       if (typeof window !== "undefined") {
+        localStorage.setItem("hello_admin_token", json.data.accessToken);
+        localStorage.setItem("hello_admin_refresh_token", json.data.refreshToken);
         localStorage.setItem("hello_admin_session", JSON.stringify({
-          email,
-          role: "SUPER_ADMIN",
-          name: "Super Admin",
-          token: "jwt_admin_authenticated_" + Date.now()
+          email: json.data.user.email,
+          role: json.data.user.role || "SUPER_ADMIN",
+          name: json.data.user.fullName || "Super Admin",
+          token: json.data.accessToken,
         }));
       }
 
       // Navigate to Super Admin Console
       router.push("/");
-    } catch {
-      setErrorMessage("Authentication failed. Please verify your administrator credentials.");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Authentication failed. Please verify your administrator credentials.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMfaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!mfaCode || mfaCode.length !== 6) {
+      setErrorMessage("Please enter the 6-digit MFA verification code.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setErrorMessage(null);
+
+      const res = await fetch("http://localhost:4000/api/v1/admin/auth/mfa/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mfaChallengeId,
+          code: mfaCode.trim(),
+          deviceInfo: "Super Admin Desktop Console",
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Invalid MFA code.");
+      }
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("hello_admin_token", json.data.accessToken);
+        localStorage.setItem("hello_admin_refresh_token", json.data.refreshToken);
+        localStorage.setItem("hello_admin_session", JSON.stringify({
+          email: json.data.user.email,
+          role: json.data.user.role || "SUPER_ADMIN",
+          name: json.data.user.fullName || "Super Admin",
+          token: json.data.accessToken,
+        }));
+      }
+
+      router.push("/");
+    } catch (err: any) {
+      setErrorMessage(err.message || "MFA verification failed.");
     } finally {
       setIsLoading(false);
     }
@@ -208,95 +278,142 @@ export default function SuperAdminLoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5">
-              {/* Email Address Field */}
-              <div className="space-y-1 text-left">
-                <label className="block text-xs font-semibold text-[#0B1220]">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+            {isMfaStep ? (
+              <form onSubmit={handleMfaSubmit} className="space-y-4">
+                <div className="p-3 bg-sky-50 border border-sky-200 text-sky-800 text-xs rounded-xl">
+                  <strong>Two-Factor Verification Required</strong>
+                  <p className="mt-0.5 text-sky-700">Enter the 6-digit MFA security token generated for your administrator account.</p>
+                </div>
+
+                <div className="space-y-1 text-left">
+                  <label className="block text-xs font-semibold text-[#0B1220]">
+                    6-Digit Security Token
+                  </label>
                   <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Enter your email address"
-                    className="w-full h-10 sm:h-11 bg-white border border-slate-200 rounded-xl pl-10 pr-3 text-xs sm:text-sm text-[#0B1220] placeholder-[#94A3B8] focus:outline-none focus:border-[#0076D7] focus:ring-2 focus:ring-[#0076D7]/10 transition font-normal"
+                    type="text"
+                    maxLength={6}
+                    autoFocus
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="••••••"
+                    className="w-full h-12 text-center text-2xl font-black tracking-widest bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-[#0076D7] focus:bg-white focus:outline-none transition"
                   />
                 </div>
-              </div>
 
-              {/* Password Field */}
-              <div className="space-y-1 text-left">
-                <label className="block text-xs font-semibold text-[#0B1220]">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    className="w-full h-10 sm:h-11 bg-white border border-slate-200 rounded-xl pl-10 pr-10 text-xs sm:text-sm text-[#0B1220] placeholder-[#94A3B8] focus:outline-none focus:border-[#0076D7] focus:ring-2 focus:ring-[#0076D7]/10 transition font-normal"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0B1220] transition"
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    {showPassword ? (
-                      <EyeOff className="w-4 h-4" />
-                    ) : (
-                      <Eye className="w-4 h-4" />
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Remember Me & Forgot Password Row */}
-              <div className="flex items-center justify-between text-xs pt-0.5">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                    className="w-3.5 h-3.5 rounded text-[#0076D7] focus:ring-[#0076D7] border-slate-300 accent-[#0076D7]"
-                  />
-                  <span className="text-slate-600 font-medium">Remember me</span>
-                </label>
+                <button
+                  type="submit"
+                  disabled={isLoading || mfaCode.length !== 6}
+                  className="w-full h-11 bg-gradient-to-r from-[#0076D7] to-[#0067CA] hover:from-[#0067CA] hover:to-[#0056B8] disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-full font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Verifying Token...</span>
+                    </>
+                  ) : (
+                    <span>Verify &amp; Enter Console</span>
+                  )}
+                </button>
 
                 <button
                   type="button"
-                  onClick={() => alert("Please contact platform root administration to reset Super Admin access credentials.")}
-                  className="text-xs font-medium text-[#0076D7] hover:underline"
+                  onClick={() => setIsMfaStep(false)}
+                  className="w-full text-xs text-slate-500 hover:text-slate-800 text-center pt-2"
                 >
-                  Forgot Password?
+                  ← Back to Password Login
                 </button>
-              </div>
+              </form>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-3.5">
+                {/* Email Address Field */}
+                <div className="space-y-1 text-left">
+                  <label className="block text-xs font-semibold text-[#0B1220]">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Enter your email address"
+                      className="w-full h-10 sm:h-11 bg-white border border-slate-200 rounded-xl pl-10 pr-3 text-xs sm:text-sm text-[#0B1220] placeholder-[#94A3B8] focus:outline-none focus:border-[#0076D7] focus:ring-2 focus:ring-[#0076D7]/10 transition font-normal"
+                    />
+                  </div>
+                </div>
 
-              {/* Primary Sign In Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-11 sm:h-12 mt-1 bg-gradient-to-r from-[#0076D7] to-[#0067CA] hover:from-[#0067CA] hover:to-[#0056B8] text-white rounded-full font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.99] transition"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Signing in...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
-            </form>
+                {/* Password Field */}
+                <div className="space-y-1 text-left">
+                  <label className="block text-xs font-semibold text-[#0B1220]">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <Lock className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Enter your password"
+                      className="w-full h-10 sm:h-11 bg-white border border-slate-200 rounded-xl pl-10 pr-10 text-xs sm:text-sm text-[#0B1220] placeholder-[#94A3B8] focus:outline-none focus:border-[#0076D7] focus:ring-2 focus:ring-[#0076D7]/10 transition font-normal"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0B1220] transition"
+                      title={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Remember Me & Forgot Password Row */}
+                <div className="flex items-center justify-between text-xs pt-0.5">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded text-[#0076D7] focus:ring-[#0076D7] border-slate-300 accent-[#0076D7]"
+                    />
+                    <span className="text-slate-600 font-medium">Remember me</span>
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => alert("Please contact platform root administration to reset Super Admin access credentials.")}
+                    className="text-xs font-medium text-[#0076D7] hover:underline"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
+
+                {/* Primary Sign In Button */}
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-11 sm:h-12 mt-1 bg-gradient-to-r from-[#0076D7] to-[#0067CA] hover:from-[#0067CA] hover:to-[#0056B8] text-white rounded-full font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.99] transition"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
 
             {/* OR Divider */}
             <div className="relative my-2 sm:my-3 flex items-center justify-center">
