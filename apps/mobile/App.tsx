@@ -35,6 +35,23 @@ const ALL_14_CATEGORIES = [
   { id: 'dentists', name: 'Dentists', slug: 'dentists', icon: '🦷', bgColor: '#F0FDFA' },
 ];
 
+const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
+  restaurants: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
+  hotels: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop&q=80",
+  "beauty-spa": "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80",
+  "home-decor": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&auto=format&fit=crop&q=80",
+  "ask-astro": "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=80",
+  "wedding-planning": "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&auto=format&fit=crop&q=80",
+  education: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80",
+  "rent-hire": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&auto=format&fit=crop&q=80",
+  hospitals: "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=800&auto=format&fit=crop&q=80",
+  contractors: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&auto=format&fit=crop&q=80",
+  "pet-shops": "https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=800&auto=format&fit=crop&q=80",
+  "pg-hostels": "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&auto=format&fit=crop&q=80",
+  "estate-agent": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+  dentists: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&auto=format&fit=crop&q=80",
+};
+
 const getCategoryEmoji = (iconName?: string | null, slug?: string): string => {
   const s = (slug || iconName || '').toLowerCase();
   if (s.includes('rest') || s.includes('food') || s.includes('utensil')) return '🍽️';
@@ -114,6 +131,7 @@ export default function App() {
   const [newBizPhone, setNewBizPhone] = useState('');
   const [newBizWhatsapp, setNewBizWhatsapp] = useState('');
   const [newBizDesc, setNewBizDesc] = useState('');
+  const [newBizCoverPhoto, setNewBizCoverPhoto] = useState('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80');
   const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
 
   const [myEnquiries, setMyEnquiries] = useState<any[]>([
@@ -225,7 +243,9 @@ export default function App() {
         locality: newBizLocality.trim() || 'Central',
         phone: newBizPhone.trim(),
         whatsapp: (newBizWhatsapp || newBizPhone).trim(),
-        description: newBizDesc.trim() || `${newBizName} is a verified provider in ${newBizLocality}, ${newBizCity}.`
+        description: newBizDesc.trim() || `${newBizName} is a verified provider in ${newBizLocality}, ${newBizCity}.`,
+        coverPhoto: (newBizCoverPhoto || '').trim() || undefined,
+        coverImageUrl: (newBizCoverPhoto || '').trim() || undefined
       };
 
       const res = await fetch(`${API_BASE}/businesses`, {
@@ -245,6 +265,7 @@ export default function App() {
       setNewBizPhone('');
       setNewBizWhatsapp('');
       setNewBizDesc('');
+      setNewBizCoverPhoto('');
       setSelectedCategory(newBizCategory);
       setSelectedCity(newBizCity);
 
@@ -776,19 +797,35 @@ export default function App() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                businesses.map((biz: any) => (
-                  <TouchableOpacity
-                    key={biz.id}
-                    activeOpacity={0.88}
-                    onPress={() => setSelectedBusiness(biz)}
-                    style={styles.businessCard}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <View style={{ flex: 1, paddingRight: 8 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Text style={styles.bizCardTitle} numberOfLines={1}>{biz.name}</Text>
-                          <Text style={{ color: '#0076D7', fontSize: 11, fontWeight: 'bold' }}>✓</Text>
+                businesses.map((biz: any) => {
+                  const cardImg = biz.coverImageUrl || biz.imageUrl || biz.image || CATEGORY_DEFAULT_IMAGES[biz.primaryCategory?.slug || biz.category || 'restaurants'] || CATEGORY_DEFAULT_IMAGES['restaurants'];
+                  return (
+                    <TouchableOpacity
+                      key={biz.id}
+                      activeOpacity={0.88}
+                      onPress={() => setSelectedBusiness(biz)}
+                      style={styles.businessCard}
+                    >
+                      {/* Business Cover Photo Banner */}
+                      <View style={{ width: '100%', height: 120, borderRadius: 12, overflow: 'hidden', marginBottom: 10, backgroundColor: '#E2E8F0' }}>
+                        <Image
+                          source={{ uri: cardImg }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(15, 23, 42, 0.8)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                          <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '800' }}>
+                            {biz.primaryCategory?.name || 'Verified'}
+                          </Text>
                         </View>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Text style={styles.bizCardTitle} numberOfLines={1}>{biz.name}</Text>
+                            <Text style={{ color: '#0076D7', fontSize: 11, fontWeight: 'bold' }}>✓</Text>
+                          </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                           <Text style={{ fontSize: 11, fontWeight: '800', color: '#F59E0B' }}>★ {biz.averageRating || 4.8}</Text>
                           <Text style={{ fontSize: 10, color: '#64748B' }}>({biz.totalReviews || 45} reviews)</Text>
@@ -843,8 +880,9 @@ export default function App() {
                       </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
-                ))
-              )}
+                );
+              })
+            )}
             </View>
           </View>
         )}
@@ -1360,6 +1398,53 @@ export default function App() {
                 value={newBizDesc}
                 onChangeText={setNewBizDesc}
               />
+
+              {/* Cover Photo / Image URL & Preset Selection */}
+              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Cover Image / Photo URL</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="https://images.unsplash.com/... or paste image URL"
+                placeholderTextColor="#94A3B8"
+                value={newBizCoverPhoto}
+                onChangeText={setNewBizCoverPhoto}
+              />
+              <Text style={{ fontSize: 10, color: '#64748B', marginTop: 4, marginBottom: 6 }}>
+                Select quick category photo or enter image URL:
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                {Object.entries(CATEGORY_DEFAULT_IMAGES).map(([catKey, imgUrl]) => {
+                  const isSel = newBizCoverPhoto === imgUrl;
+                  return (
+                    <TouchableOpacity
+                      key={catKey}
+                      onPress={() => setNewBizCoverPhoto(imgUrl)}
+                      style={{
+                        marginRight: 8,
+                        borderRadius: 8,
+                        borderWidth: isSel ? 2 : 1,
+                        borderColor: isSel ? '#0076D7' : '#E2E8F0',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <Image source={{ uri: imgUrl }} style={{ width: 62, height: 44 }} resizeMode="cover" />
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Selected Image Preview */}
+              {newBizCoverPhoto ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0FDF4', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#BBF7D0', gap: 10, marginBottom: 8 }}>
+                  <Image source={{ uri: newBizCoverPhoto }} style={{ width: 50, height: 40, borderRadius: 6 }} resizeMode="cover" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#16A34A' }}>✓ Image Ready for DB</Text>
+                    <Text style={{ fontSize: 9, color: '#64748B' }} numberOfLines={1}>{newBizCoverPhoto}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setNewBizCoverPhoto('')}>
+                    <Text style={{ fontSize: 10, color: '#EF4444', fontWeight: 'bold' }}>Clear</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </ScrollView>
 
             <TouchableOpacity

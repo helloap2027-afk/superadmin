@@ -12,10 +12,98 @@ import {
   Send, X, CheckCircle, Clock, MapPin, Phone, MessageSquare, 
   Sparkles, Loader2, Star, ShieldCheck, Plus, Building2, 
   Map as MapIcon, LayoutGrid, Tag, Calendar, DollarSign, 
-  Navigation, Plane, Car, Train, FileText, CheckCircle2, ChevronRight, Share2, Heart, Zap
+  Navigation, Plane, Car, Train, FileText, CheckCircle2, ChevronRight, Share2, Heart, Zap,
+  Camera, Upload, Image as ImageIcon
 } from "lucide-react";
 
 const API_BASE = "http://localhost:4000/api/v1";
+
+const CATEGORY_PRESET_IMAGES: Record<string, string[]> = {
+  restaurants: [
+    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&auto=format&fit=crop&q=80"
+  ],
+  hotels: [
+    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&auto=format&fit=crop&q=80"
+  ],
+  "beauty-spa": [
+    "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1519415510236-718bdfcd89c8?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&auto=format&fit=crop&q=80"
+  ],
+  "home-decor": [
+    "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80"
+  ],
+  "ask-astro": [
+    "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1514533450685-4493e01d1fdc?w=800&auto=format&fit=crop&q=80"
+  ],
+  "wedding-planning": [
+    "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=800&auto=format&fit=crop&q=80"
+  ],
+  education: [
+    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=80"
+  ],
+  "rent-hire": [
+    "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&auto=format&fit=crop&q=80"
+  ],
+  hospitals: [
+    "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=800&auto=format&fit=crop&q=80"
+  ],
+  contractors: [
+    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800&auto=format&fit=crop&q=80"
+  ],
+  "pet-shops": [
+    "https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=800&auto=format&fit=crop&q=80"
+  ],
+  "pg-hostels": [
+    "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80"
+  ],
+  "estate-agent": [
+    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80"
+  ],
+  dentists: [
+    "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=800&auto=format&fit=crop&q=80",
+    "https://images.unsplash.com/photo-1598256989800-fe5f95da9787?w=800&auto=format&fit=crop&q=80"
+  ],
+};
 
 function HomeExploreContent() {
   const searchParams = useSearchParams();
@@ -80,8 +168,26 @@ function HomeExploreContent() {
   const [newBizClosesAt, setNewBizClosesAt] = useState("09:30 PM");
   const [newBizGst, setNewBizGst] = useState("36AAAAA0000A1Z5");
   const [newBizCoverPhoto, setNewBizCoverPhoto] = useState("https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop");
+  const [imageInputMode, setImageInputMode] = useState<"url" | "file" | "presets">("url");
   const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
   const [bizCreatedSuccess, setBizCreatedSuccess] = useState(false);
+
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Please select an image smaller than 5MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          setNewBizCoverPhoto(event.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Auth / Login modal state (User logged in as SparkleSmart Ele... matching screenshot)
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -1378,6 +1484,110 @@ function HomeExploreContent() {
                       onChange={(e) => setNewBizAddress(e.target.value)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0076D7]"
                     />
+                  </div>
+
+                  {/* Select Image or URL Option */}
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Business Image / Cover Photo
+                      </label>
+                      <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMode("url")}
+                          className={`px-2 py-0.5 rounded-md transition ${imageInputMode === "url" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
+                        >
+                          🔗 Image URL
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMode("file")}
+                          className={`px-2 py-0.5 rounded-md transition ${imageInputMode === "file" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
+                        >
+                          📁 Select File
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMode("presets")}
+                          className={`px-2 py-0.5 rounded-md transition ${imageInputMode === "presets" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
+                        >
+                          ✨ Presets
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Mode 1: Direct Image URL */}
+                    {imageInputMode === "url" && (
+                      <div>
+                        <input
+                          type="url"
+                          placeholder="https://images.unsplash.com/... or paste image URL"
+                          value={newBizCoverPhoto}
+                          onChange={(e) => setNewBizCoverPhoto(e.target.value)}
+                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0076D7]"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Enter a direct image link (JPG, PNG, WebP or Unsplash URL)</p>
+                      </div>
+                    )}
+
+                    {/* Mode 2: File Selector from Device */}
+                    {imageInputMode === "file" && (
+                      <div>
+                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 hover:border-[#0076D7] bg-white rounded-xl cursor-pointer transition">
+                          <div className="flex flex-col items-center justify-center pt-2 pb-2">
+                            <Camera className="w-5 h-5 text-slate-400 mb-1" />
+                            <p className="text-xs font-semibold text-slate-700">Click to Select / Upload Image</p>
+                            <p className="text-[10px] text-slate-400">PNG, JPG, WebP up to 5MB</p>
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageFileUpload}
+                          />
+                        </label>
+                      </div>
+                    )}
+
+                    {/* Mode 3: Curated Presets for Current Category */}
+                    {imageInputMode === "presets" && (
+                      <div className="grid grid-cols-4 gap-2">
+                        {(CATEGORY_PRESET_IMAGES[newBizCategory] || CATEGORY_PRESET_IMAGES["restaurants"]).map((imgUrl, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => setNewBizCoverPhoto(imgUrl)}
+                            className={`relative h-14 rounded-lg overflow-hidden cursor-pointer border-2 transition ${newBizCoverPhoto === imgUrl ? "border-[#0076D7] ring-2 ring-blue-200" : "border-slate-200 hover:border-slate-400"}`}
+                          >
+                            <img src={imgUrl} alt="Preset" className="w-full h-full object-cover" />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Selected Image Preview */}
+                    {newBizCoverPhoto && (
+                      <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-slate-200">
+                        <img
+                          src={newBizCoverPhoto}
+                          alt="Preview"
+                          className="w-14 h-12 rounded-lg object-cover shadow-xs border border-slate-100"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[11px] font-bold text-emerald-600 block">✓ Image Selected & Will Be Saved in DB</span>
+                          <span className="text-[10px] text-slate-400 truncate block">
+                            {newBizCoverPhoto.startsWith("data:") ? "Local File Selected (Base64)" : newBizCoverPhoto}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setNewBizCoverPhoto("")}
+                          className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-2 flex items-center justify-end gap-2">
