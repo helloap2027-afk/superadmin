@@ -67,7 +67,7 @@ function HomeExploreContent() {
   const [isAddBizModalOpen, setIsAddBizModalOpen] = useState(false);
   const [newBizName, setNewBizName] = useState("");
   const [newBizLegalName, setNewBizLegalName] = useState("");
-  const [newBizCategory, setNewBizCategory] = useState("restaurants-food");
+  const [newBizCategory, setNewBizCategory] = useState("restaurants");
   const [newBizCity, setNewBizCity] = useState<"Hyderabad" | "Vijayawada" | "Guntur">("Hyderabad");
   const [newBizLocality, setNewBizLocality] = useState("Hitec City");
   const [newBizAddress, setNewBizAddress] = useState("Cyber Towers Lane, Hitec City");
@@ -324,24 +324,62 @@ function HomeExploreContent() {
   };
 
   // Handle Register Business with ALL fields
+  // Handle Register Business with ALL fields - Real DB Persistence & Instant Category Display
   const handleAddBusinessSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBizName.trim()) return;
     setIsSubmittingBiz(true);
 
     try {
-      // Simulate successful database registration & queue for verification
+      const res = await fetch(`${API_BASE}/businesses`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newBizName.trim(),
+          legalName: newBizLegalName.trim() || newBizName.trim(),
+          category: newBizCategory,
+          city: newBizCity,
+          locality: newBizLocality,
+          address: newBizAddress,
+          landmark: newBizLandmark,
+          pincode: newBizPincode,
+          phone: newBizPhone,
+          whatsapp: newBizWhatsapp,
+          email: newBizEmail,
+          opensAt: newBizOpensAt,
+          closesAt: newBizClosesAt,
+          gstin: newBizGst,
+          coverPhoto: newBizCoverPhoto,
+          description: `${newBizName.trim()} offering verified professional services in ${newBizLocality}, ${newBizCity}. Contact: ${newBizPhone}.`,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || "Failed to register business in database.");
+      }
+
+      const createdBiz: BusinessItemCard = json.data;
+
+      // Automatically switch to the city & category of the newly registered business
+      setSelectedCity(newBizCity);
+      setSelectedCategory(createdBiz.primaryCategory?.slug || newBizCategory);
+      setSelectedLocality(null);
+
+      // Prepend to businesses state immediately so it displays right at the top of the selected category
+      setBusinesses((prev) => [createdBiz, ...prev.filter((b) => b.id !== createdBiz.id)]);
+
+      setIsSubmittingBiz(false);
+      setBizCreatedSuccess(true);
+
       setTimeout(() => {
-        setIsSubmittingBiz(false);
-        setBizCreatedSuccess(true);
-        setTimeout(() => {
-          setIsAddBizModalOpen(false);
-          setBizCreatedSuccess(false);
-          setNewBizName("");
-          fetchBusinesses();
-        }, 1800);
-      }, 700);
-    } catch {
+        setIsAddBizModalOpen(false);
+        setBizCreatedSuccess(false);
+        setNewBizName("");
+        setNewBizLegalName("");
+      }, 1600);
+    } catch (err: any) {
+      alert("Error adding business to database: " + (err.message || "Network error"));
       setIsSubmittingBiz(false);
     }
   };
@@ -1179,10 +1217,10 @@ function HomeExploreContent() {
             <div className="p-6">
               {bizCreatedSuccess ? (
                 <div className="text-center py-6 space-y-3">
-                  <CheckCircle className="w-12 h-12 text-[#16A34A] mx-auto" />
-                  <h4 className="text-base font-bold text-slate-900">Business Listing Submitted!</h4>
+                  <CheckCircle className="w-12 h-12 text-[#16A34A] mx-auto animate-bounce" />
+                  <h4 className="text-base font-bold text-slate-900">Business Saved in Database & Live!</h4>
                   <p className="text-xs text-slate-600">
-                    Your business has been registered in the database for {newBizCity} and is queued for verification.
+                    Your business has been saved directly to the database and is now live under <strong className="text-[#0076D7]">{newBizCategory}</strong> in <strong>{newBizCity}</strong>.
                   </p>
                 </div>
               ) : (
@@ -1240,9 +1278,10 @@ function HomeExploreContent() {
                       <label className="block text-xs font-semibold text-slate-700 mb-1">Pilot City *</label>
                       <select
                         value={newBizCity}
-                        onChange={(e) => setNewBizCity(e.target.value as "Vijayawada" | "Guntur")}
+                        onChange={(e) => setNewBizCity(e.target.value as "Hyderabad" | "Vijayawada" | "Guntur")}
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0076D7]"
                       >
+                        <option value="Hyderabad">Hyderabad</option>
                         <option value="Vijayawada">Vijayawada</option>
                         <option value="Guntur">Guntur</option>
                       </select>
