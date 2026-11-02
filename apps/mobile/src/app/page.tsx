@@ -402,6 +402,32 @@ export default function MobileAppSimulator() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [showRawDbJson, setShowRawDbJson] = useState(false);
 
+  // Dynamic Categories from Database
+  const [categories, setCategories] = useState<MobileCategory[]>(ALL_14_SERVICES);
+
+  // Load categories directly from Database
+  useEffect(() => {
+    async function loadDbCategories() {
+      try {
+        const res = await fetch(`${API_BASE}/categories`);
+        const json = await res.json();
+        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+          setCategories(json.data.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            slug: c.slug,
+            icon: getCategoryIcon(c.slug),
+            bgColor: "bg-blue-50",
+            textColor: "text-blue-600"
+          })));
+        }
+      } catch (err) {
+        console.log("Categories DB fetch notice:", err);
+      }
+    }
+    loadDbCategories();
+  }, []);
+
   // Load user session on mount
   useEffect(() => {
     const savedToken = typeof window !== "undefined" ? localStorage.getItem("hello_mobile_token") : null;
@@ -724,9 +750,9 @@ export default function MobileAppSimulator() {
                 </button>
               </div>
 
-              {/* 14 Categories Responsive Grid */}
+              {/* Categories Responsive Grid (Direct from DB) */}
               <div className="grid grid-cols-2 gap-2.5">
-                {ALL_14_SERVICES.map((srv) => {
+                {categories.map((srv) => {
                   const isSelected = selectedCategory === srv.slug;
                   return (
                     <div
@@ -1045,7 +1071,7 @@ export default function MobileAppSimulator() {
                     🌟 All
                   </button>
 
-                  {ALL_14_SERVICES.map((cat) => {
+                  {categories.map((cat) => {
                     const isSelected = selectedCategory === cat.slug;
                     return (
                       <button
@@ -1101,9 +1127,9 @@ export default function MobileAppSimulator() {
                   </button>
                 </div>
 
-                {/* 4-Column Grid of All 14 Categories */}
+                {/* 4-Column Grid of All Categories (Direct from DB) */}
                 <div className="grid grid-cols-4 gap-2 text-center">
-                  {ALL_14_SERVICES.map((srv) => {
+                  {categories.map((srv) => {
                     const isSelected = selectedCategory === srv.slug;
                     return (
                       <div

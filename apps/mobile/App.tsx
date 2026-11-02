@@ -35,6 +35,30 @@ const ALL_14_CATEGORIES = [
   { id: 'dentists', name: 'Dentists', slug: 'dentists', icon: '🦷', bgColor: '#F0FDFA' },
 ];
 
+const getCategoryEmoji = (iconName?: string | null, slug?: string): string => {
+  const s = (slug || iconName || '').toLowerCase();
+  if (s.includes('rest') || s.includes('food') || s.includes('utensil')) return '🍽️';
+  if (s.includes('hotel')) return '🏨';
+  if (s.includes('spa') || s.includes('salon')) return '💆‍♀️';
+  if (s.includes('decor') || s.includes('interior') || s.includes('armchair')) return '🛋️';
+  if (s.includes('astro') || s.includes('vastu')) return '🔮';
+  if (s.includes('wed') || s.includes('heart')) return '💍';
+  if (s.includes('edu') || s.includes('school') || s.includes('graduat')) return '🎓';
+  if (s.includes('rent') || s.includes('hire') || s.includes('key')) return '🔑';
+  if (s.includes('hosp')) return '🏥';
+  if (s.includes('contract') || s.includes('hardhat')) return '👷';
+  if (s.includes('pet') || s.includes('paw')) return '🐾';
+  if (s.includes('pg') || s.includes('hostel') || s.includes('bed')) return '🛏️';
+  if (s.includes('estate') || s.includes('real') || s.includes('building')) return '🏢';
+  if (s.includes('dent') || s.includes('smile')) return '🦷';
+  if (s.includes('doctor') || s.includes('stetho')) return '🩺';
+  if (s.includes('mover') || s.includes('truck')) return '🚚';
+  if (s.includes('tour') || s.includes('travel') || s.includes('plane')) return '✈️';
+  if (s.includes('electr') || s.includes('zap')) return '⚡';
+  if (s.includes('home')) return '🏠';
+  return '🏢';
+};
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'Home' | 'Services' | 'Enquiries' | 'Profile'>('Home');
   const [mode, setMode] = useState<'customer' | 'vendor'>('customer');
@@ -43,6 +67,10 @@ export default function App() {
   const [showCityModal, setShowCityModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+
+  // Categories loaded directly from Database
+  const [categories, setCategories] = useState<any[]>(ALL_14_CATEGORIES);
+  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(false);
 
   // Business DB State
   const [businesses, setBusinesses] = useState<any[]>([]);
@@ -89,6 +117,33 @@ export default function App() {
       message: 'Invisible aligners consultation.'
     }
   ]);
+
+  // Fetch categories directly from MySQL hello_db
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    setIsLoadingCategories(true);
+    try {
+      const res = await fetch(`${API_BASE}/categories`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        setCategories(json.data.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          slug: c.slug,
+          icon: getCategoryEmoji(c.iconName, c.slug),
+          businessesCount: c.businessesCount || 0,
+          bgColor: '#F8FAFC'
+        })));
+      }
+    } catch (e) {
+      console.log('Error fetching categories from DB:', e);
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
 
   // Fetch businesses from live DB
   useEffect(() => {
@@ -349,12 +404,14 @@ export default function App() {
       {/* MAIN BODY CONTENT */}
       <ScrollView style={styles.mainScrollView} contentContainerStyle={{ paddingBottom: 90 }}>
         {activeTab === 'Services' ? (
-          /* ================= ALL 14 SERVICES EXPLORE GRID ================= */
+          /* ================= ALL SERVICES EXPLORE GRID ================= */
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <View>
-                <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>All 14 Services</Text>
-                <Text style={{ fontSize: 11, color: '#64748B' }}>Verified Commercial Categories in {selectedCity}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>
+                  All Categories ({categories.length})
+                </Text>
+                <Text style={{ fontSize: 11, color: '#64748B' }}>Loaded from MySQL Database • {selectedCity}</Text>
               </View>
               <TouchableOpacity
                 onPress={() => { setSelectedCategory('All'); setActiveTab('Home'); }}
@@ -365,7 +422,7 @@ export default function App() {
             </View>
 
             <View style={styles.categories2ColGrid}>
-              {ALL_14_CATEGORIES.map((srv) => {
+              {categories.map((srv) => {
                 const isSelected = selectedCategory === srv.slug;
                 return (
                   <TouchableOpacity
@@ -379,12 +436,14 @@ export default function App() {
                       isSelected && { borderColor: '#0076D7', borderWidth: 2, backgroundColor: '#EFF6FF' }
                     ]}
                   >
-                    <View style={[styles.categoryIconSquare, { backgroundColor: srv.bgColor }]}>
+                    <View style={[styles.categoryIconSquare, { backgroundColor: srv.bgColor || '#F1F5F9' }]}>
                       <Text style={{ fontSize: 20 }}>{srv.icon}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>{srv.name}</Text>
-                      <Text style={{ fontSize: 10, color: '#94A3B8' }}>Verified Services</Text>
+                      <Text style={{ fontSize: 10, color: '#0076D7', fontWeight: '600' }}>
+                        {srv.businessesCount ? `${srv.businessesCount} in DB` : 'Verified Services'}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -499,7 +558,7 @@ export default function App() {
         ) : (
           /* ================= HOME TAB (MAIN HUB) ================= */
           <View>
-            {/* 1. HORIZONTAL ALL 14 CATEGORIES CAROUSEL PILLS */}
+            {/* 1. HORIZONTAL ALL CATEGORIES CAROUSEL PILLS (LOADED FROM DB) */}
             <View style={{ marginVertical: 8 }}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 6 }}>
                 <TouchableOpacity
@@ -511,7 +570,7 @@ export default function App() {
                   </Text>
                 </TouchableOpacity>
 
-                {ALL_14_CATEGORIES.map((cat) => {
+                {categories.map((cat) => {
                   const isSelected = selectedCategory === cat.slug;
                   return (
                     <TouchableOpacity
@@ -553,17 +612,22 @@ export default function App() {
               </TouchableOpacity>
             </ScrollView>
 
-            {/* 3. EXPLORE ALL 14 SERVICES GRID (4 COLUMNS) */}
+            {/* 3. EXPLORE ALL CATEGORIES GRID (LOADED FROM DB) */}
             <View style={styles.exploreGridContainer}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>Explore All Services</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>Explore Categories</Text>
+                  <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 8 }}>
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#16A34A' }}>{categories.length} in DB</Text>
+                  </View>
+                </View>
                 <TouchableOpacity onPress={() => setActiveTab('Services')}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0076D7' }}>View All (14) →</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0076D7' }}>View All ({categories.length}) →</Text>
                 </TouchableOpacity>
               </View>
 
               <View style={styles.grid4Col}>
-                {ALL_14_CATEGORIES.map((cat) => {
+                {categories.map((cat) => {
                   const isSelected = selectedCategory === cat.slug;
                   return (
                     <TouchableOpacity
@@ -571,7 +635,7 @@ export default function App() {
                       onPress={() => setSelectedCategory(isSelected ? 'All' : cat.slug)}
                       style={[styles.grid4ColItem, isSelected && styles.grid4ColItemActive]}
                     >
-                      <View style={[styles.iconCircleSmall, { backgroundColor: cat.bgColor }]}>
+                      <View style={[styles.iconCircleSmall, { backgroundColor: cat.bgColor || '#F1F5F9' }]}>
                         <Text style={{ fontSize: 16 }}>{cat.icon}</Text>
                       </View>
                       <Text style={[styles.grid4ColText, isSelected && { color: '#0076D7', fontWeight: '800' }]} numberOfLines={1}>
