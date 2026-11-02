@@ -134,13 +134,13 @@ export default function SuperAdminLoginPage() {
 
   return (
     <div
-      className="h-screen max-h-screen w-full flex flex-col lg:flex-row bg-[#F8FAFC] overflow-hidden select-none selection:bg-[#0076D7]/20"
+      className="min-h-screen w-full flex flex-col lg:flex-row overflow-x-hidden overflow-y-auto bg-[#F8FAFC] lg:overflow-hidden select-none selection:bg-[#0076D7]/20"
       style={{ fontFamily: "'Poppins', sans-serif" }}
     >
       {/* =========================================================================
           LEFT BRANDING PANEL (~56.6% width on Desktop, matching reference design)
          ========================================================================= */}
-      <div className="w-full lg:w-[56.6%] h-full max-h-screen bg-gradient-to-br from-[#0056B8] via-[#0076D7] to-[#1689ED] relative text-white p-5 sm:p-7 lg:p-9 xl:p-12 flex flex-col justify-between overflow-hidden shrink-0">
+      <div className="w-full lg:w-[56.6%] min-h-[500px] lg:h-full lg:max-h-screen bg-gradient-to-br from-[#0056B8] via-[#0076D7] to-[#1689ED] relative text-white p-5 sm:p-7 lg:p-9 xl:p-12 flex flex-col justify-between overflow-hidden shrink-0">
         
         {/* Soft Translucent Concentric Glow Rings */}
         <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-white/10 blur-3xl pointer-events-none" />
@@ -158,7 +158,7 @@ export default function SuperAdminLoginPage() {
           {/* Left Text Column (~480px) */}
           <div className="max-w-[460px] w-full space-y-4 lg:space-y-5">
             {/* Headline (3 lines at reference desktop width) */}
-            <h1 className="text-2xl sm:text-3xl lg:text-[34px] xl:text-[38px] font-bold text-white tracking-tight leading-[1.16]">
+            <h1 className="text-xl sm:text-2xl lg:text-[26px] xl:text-[28px] font-bold text-white tracking-tight leading-snug">
               India’s Hyperlocal<br />
               B2C Discovery &amp;<br />
               B2B Wholesale Super-App.
@@ -234,7 +234,7 @@ export default function SuperAdminLoginPage() {
           </div>
 
           {/* Right Smartphone 3D Angled Mockup */}
-          <div className="hidden xl:flex items-center justify-center relative z-20 shrink-0 self-center pr-1">
+          <div className="hidden lg:flex items-center justify-center relative z-20 shrink-0 self-center pr-1">
             <PhoneMockup />
           </div>
         </div>
@@ -246,7 +246,7 @@ export default function SuperAdminLoginPage() {
       {/* =========================================================================
           RIGHT AUTHENTICATION PANEL (~43.4% width on Desktop, matching reference)
          ========================================================================= */}
-      <div className="w-full lg:w-[43.4%] h-full max-h-screen bg-white flex flex-col justify-center items-center px-4 sm:px-8 lg:px-10 xl:px-12 py-3 lg:py-6 relative overflow-hidden shrink-0">
+      <div className="w-full lg:w-[43.4%] min-h-[600px] lg:h-full lg:max-h-screen bg-white flex flex-col justify-center items-center px-4 sm:px-8 lg:px-10 xl:px-12 py-3 lg:py-6 relative overflow-hidden shrink-0">
         
         {/* Subtle Pastel Corner Decorative Blushes (Matching Reference Screenshot) */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-bl from-blue-100/40 via-sky-50/30 to-transparent rounded-bl-full pointer-events-none" />
@@ -360,14 +360,20 @@ export default function SuperAdminLoginPage() {
                     />
                     <button
                       type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#94A3B8] hover:text-[#0B1220] transition"
+                      tabIndex={-1}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setShowPassword((prev) => !prev);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 z-20 p-1.5 text-[#94A3B8] hover:text-[#0B1220] cursor-pointer transition focus:outline-none"
                       title={showPassword ? "Hide password" : "Show password"}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
+                        <EyeOff className="w-4 h-4 pointer-events-none" />
                       ) : (
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 pointer-events-none" />
                       )}
                     </button>
                   </div>

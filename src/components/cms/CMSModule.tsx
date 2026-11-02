@@ -37,7 +37,7 @@ interface CMSModuleProps {
 }
 
 export function CMSModule({ currentSlug, onNavigateSlug }: CMSModuleProps) {
-  const [activeTab, setActiveTab] = useState<"Content" | "SEO" | "Settings" | "Preview">("Content");
+  const [activeTab, setActiveTab] = useState<"Content" | "SEO" | "Preview">("Content");
   const [language, setLanguage] = useState<"en" | "te" | "hi">("en");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -410,87 +410,36 @@ export function CMSModule({ currentSlug, onNavigateSlug }: CMSModuleProps) {
           </p>
         </div>
 
-        {/* Action Buttons Toolbar */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-2xs transition"
-          >
-            <Save className="w-3.5 h-3.5 text-slate-500" />
-            <span>{isSaving ? "Saving..." : "Save Draft"}</span>
-          </button>
-
+        {/* Action Buttons Toolbar: Preview, Draft, Publish only */}
+        <div className="flex items-center gap-2.5 shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab("Preview")}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-2xs transition"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-2xs transition cursor-pointer"
           >
             <Eye className="w-3.5 h-3.5 text-slate-500" />
             <span>Preview</span>
           </button>
 
-          {/* Publish Button (Matches CTA Orange from Screenshot) */}
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 shadow-2xs transition cursor-pointer disabled:opacity-50"
+          >
+            <Save className="w-3.5 h-3.5 text-slate-500" />
+            <span>{isSaving ? "Saving..." : "Draft"}</span>
+          </button>
+
           <button
             type="button"
             onClick={handlePublish}
             disabled={isPublishing}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-white bg-[#FF6B35] hover:bg-[#e5531e] shadow-xs transition"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-[#0076D7] hover:bg-[#0062b3] shadow-xs transition cursor-pointer disabled:opacity-50"
           >
             <Send className="w-3.5 h-3.5" />
             <span>{isPublishing ? "Publishing..." : "Publish"}</span>
           </button>
-
-          {/* More Options Dropdown */}
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
-              className="p-2 rounded-xl border border-slate-300 text-slate-600 bg-white hover:bg-slate-50 transition shadow-2xs"
-            >
-              <MoreVertical className="w-4 h-4" />
-            </button>
-
-            {isMoreMenuOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-40 text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStatus("IN_REVIEW");
-                    setIsMoreMenuOpen(false);
-                    setHasUnsavedChanges(true);
-                  }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 block"
-                >
-                  Submit for Review
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleVisibilityChange(visibility === "PUBLIC" ? "PRIVATE" : "PUBLIC");
-                    setIsMoreMenuOpen(false);
-                  }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-slate-50 text-slate-700 block"
-                >
-                  Toggle {visibility === "PUBLIC" ? "Private" : "Public"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm("Archive this content page?")) {
-                      setStatus("ARCHIVED");
-                      setIsMoreMenuOpen(false);
-                      setHasUnsavedChanges(true);
-                    }
-                  }}
-                  className="w-full text-left px-3.5 py-2 hover:bg-rose-50 text-rose-600 block border-t border-slate-100"
-                >
-                  Archive Page
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -528,21 +477,7 @@ export function CMSModule({ currentSlug, onNavigateSlug }: CMSModuleProps) {
           )}
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("Settings")}
-          className={`flex items-center gap-2 pb-3 relative transition ${
-            activeTab === "Settings"
-              ? "text-[#0076D7]"
-              : "text-slate-500 hover:text-slate-800"
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          <span>Settings</span>
-          {activeTab === "Settings" && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#0076D7]" />
-          )}
-        </button>
+
 
         <button
           type="button"
@@ -583,61 +518,7 @@ export function CMSModule({ currentSlug, onNavigateSlug }: CMSModuleProps) {
             }}
           />
         </div>
-      ) : activeTab === "Settings" ? (
-        <div className="space-y-6">
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">
-              CMS Roles & Permissions Matrix
-            </h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border border-slate-200 rounded-lg">
-                <thead className="bg-slate-50 text-slate-600 font-bold">
-                  <tr>
-                    <th className="p-2.5">Role</th>
-                    <th className="p-2.5">View</th>
-                    <th className="p-2.5">Edit</th>
-                    <th className="p-2.5">Review</th>
-                    <th className="p-2.5">Publish</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">Super Admin</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">CMS Editor</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                    <td className="p-2.5 text-slate-400">No</td>
-                    <td className="p-2.5 text-slate-400">No</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">CMS Reviewer</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                    <td className="p-2.5 text-slate-600">Configured</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                    <td className="p-2.5 text-slate-600">Configured</td>
-                  </tr>
-                  <tr>
-                    <td className="p-2.5 font-bold text-slate-900">CMS Viewer</td>
-                    <td className="p-2.5 text-emerald-600 font-bold">Yes</td>
-                    <td className="p-2.5 text-slate-400">No</td>
-                    <td className="p-2.5 text-slate-400">No</td>
-                    <td className="p-2.5 text-slate-400">No</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-            <CMSAuditTrail logs={auditLogs} />
-          </div>
-        </div>
       ) : (
         /* CONTENT TAB (Matches Reference Design Pixel-for-Pixel) */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
