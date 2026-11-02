@@ -96,7 +96,8 @@ export function DesktopHeader({
         <div className="flex items-center gap-3">
           
           {/* Brand Logo: Hello-Hi with Pin Badge */}
-          <div 
+          <Link 
+            href="/"
             onClick={() => {
               onSelectCategory(null);
               onSearchChange("");
@@ -115,7 +116,7 @@ export function DesktopHeader({
                 Search Local. Connect Instant.
               </span>
             </div>
-          </div>
+          </Link>
 
           {/* City & Locality Selector Pill */}
           <div className="relative">
@@ -234,7 +235,8 @@ export function DesktopHeader({
         {/* Right Nav Links & Actions */}
         <div className="flex items-center gap-2 lg:gap-3 shrink-0">
           
-          <button 
+          <Link 
+            href="/"
             onClick={() => {
               onSelectCategory(null);
               onSearchChange("");
@@ -242,13 +244,14 @@ export function DesktopHeader({
             className="text-xs font-bold text-slate-700 hover:text-[#0076D7] transition hidden xl:block"
           >
             Home
-          </button>
+          </Link>
 
-          <button 
+          <Link 
+            href="/explore"
             className="text-xs font-bold text-[#0076D7] bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg transition"
           >
             Explore
-          </button>
+          </Link>
 
           <button 
             onClick={onOpenFastDeals}
