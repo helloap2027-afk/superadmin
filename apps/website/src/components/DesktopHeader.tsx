@@ -47,6 +47,20 @@ export function DesktopHeader({
   const [isListeningVoice, setIsListeningVoice] = useState(false);
   const [gpsDetecting, setGpsDetecting] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
+  const cityDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
+        setShowCityDropdown(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     if (searchQuery.trim().length >= 2) {
@@ -81,6 +95,7 @@ export function DesktopHeader({
     setGpsDetecting(true);
     setTimeout(() => {
       setGpsDetecting(false);
+      setShowCityDropdown(false);
       if (onDetectLiveGps) onDetectLiveGps();
       alert(`📍 GPS Location Verified: Connected to ${selectedCity} Hyperlocal Gateway!`);
     }, 600);
@@ -119,7 +134,7 @@ export function DesktopHeader({
           </Link>
 
           {/* City & Locality Selector Pill */}
-          <div className="relative">
+          <div ref={cityDropdownRef} className="relative">
             <button
               onClick={() => setShowCityDropdown(!showCityDropdown)}
               className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 transition text-left"
@@ -134,11 +149,31 @@ export function DesktopHeader({
             </button>
 
             {showCityDropdown && (
-              <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50 overflow-hidden">
-                <div className="px-3 py-2 text-[10px] uppercase font-bold text-slate-400 tracking-wider border-b border-slate-100 flex items-center justify-between">
+              <div className="absolute left-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-2xl shadow-2xl py-1.5 z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-150">
+                {/* 1. Auto-detect option in the header of the location dropdown */}
+                <button
+                  onClick={handleGpsClick}
+                  className="w-full text-left px-3.5 py-2.5 bg-blue-50/70 hover:bg-blue-100 border-b border-blue-100 flex items-center justify-between transition group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Compass className={`w-4 h-4 text-[#0076D7] ${gpsDetecting ? "animate-spin" : "group-hover:rotate-45 transition-transform"}`} />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-[#0076D7]">
+                        {gpsDetecting ? "Detecting location..." : "Auto-detect Location"}
+                      </span>
+                      <span className="text-[10px] text-slate-500">Using Device GPS</span>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">
+                    GPS
+                  </span>
+                </button>
+
+                <div className="px-3.5 py-1.5 text-[10px] uppercase font-bold text-slate-400 tracking-wider border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
                   <span>Select Active Hub</span>
                   <span className="text-emerald-500 font-bold">Live</span>
                 </div>
+
                 {(["Hyderabad", "Vijayawada", "Guntur"] as const).map((city) => (
                   <button
                     key={city}
@@ -149,28 +184,24 @@ export function DesktopHeader({
                       }
                       setShowCityDropdown(false);
                     }}
-                    className={`w-full text-left px-3.5 py-2 text-xs font-semibold flex items-center justify-between transition ${
+                    className={`w-full text-left px-3.5 py-2.5 text-xs font-semibold flex items-center justify-between transition ${
                       selectedCity === city
                         ? "bg-[#0076D7] text-white"
                         : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <span>{city}</span>
-                    {selectedCity === city && <ShieldCheck className="w-3.5 h-3.5" />}
+                    <div>
+                      <span className="font-bold block">{city}</span>
+                      <span className={`text-[10px] ${selectedCity === city ? "text-blue-100" : "text-slate-400"}`}>
+                        {city === "Hyderabad" ? "Hitec City, Gachibowli" : city === "Vijayawada" ? "Benz Circle, Nahamar" : "Brodipet, Arundelpet"}
+                      </span>
+                    </div>
+                    {selectedCity === city && <ShieldCheck className="w-4 h-4 shrink-0" />}
                   </button>
                 ))}
               </div>
             )}
           </div>
-
-          {/* Detect Live GPS Button */}
-          <button
-            onClick={handleGpsClick}
-            className="hidden md:flex items-center gap-1.5 text-xs font-bold text-[#0076D7] bg-blue-50/70 hover:bg-blue-100 border border-blue-200 px-3 py-1.5 rounded-full transition shrink-0"
-          >
-            <Compass className={`w-3.5 h-3.5 text-[#0076D7] ${gpsDetecting ? "animate-spin" : ""}`} />
-            <span>Detect</span>
-          </button>
         </div>
 
         {/* Center: Search Capsule Bar with Mic & Search Button */}
