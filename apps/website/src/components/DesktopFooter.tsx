@@ -53,12 +53,13 @@ export function DesktopFooter() {
 
           {/* Col 4: Platform Portals & Security */}
           <div className="space-y-2.5">
-            <h4 className="text-white font-bold text-xs uppercase tracking-wider">Platform Hubs</h4>
+            <h4 className="text-white font-bold text-xs uppercase tracking-wider">Company & Support</h4>
             <ul className="space-y-1.5 text-xs">
-              <li><a href="http://localhost:3001" target="_blank" rel="noopener noreferrer" className="hover:text-white transition text-[#FF6B35] font-semibold">Super Admin Console (3001) →</a></li>
-              <li><a href="http://localhost:3002" target="_blank" rel="noopener noreferrer" className="hover:text-white transition text-[#0076D7] font-semibold">Mobile App Simulator (3002) →</a></li>
-              <li><a href="http://localhost:4000/api/v1/health" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Live API Health Engine →</a></li>
-              <li><a href="http://localhost:4000/api/docs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Swagger API Contracts →</a></li>
+              <li><a href="/about-us" className="hover:text-white transition font-medium text-slate-300">ℹ️ About Hello-Hi →</a></li>
+              <li><a href="/contact-support" className="hover:text-white transition font-medium text-slate-300">📞 Contact & Support →</a></li>
+              <li><a href="/faqs" className="hover:text-white transition font-medium text-slate-300">❓ Frequently Asked Questions (FAQ) →</a></li>
+              <li><a href="/terms-and-conditions" className="hover:text-white transition font-medium text-slate-300">📜 Terms & Conditions →</a></li>
+              <li><a href="/privacy-policy" className="hover:text-white transition font-medium text-slate-300">🛡️ Privacy Policy (DPDP 2023) →</a></li>
             </ul>
           </div>
 

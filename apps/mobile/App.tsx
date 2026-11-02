@@ -134,6 +134,21 @@ export default function App() {
   const [newBizCoverPhoto, setNewBizCoverPhoto] = useState('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80');
   const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
 
+  // CMS Pages Modal State (About, Terms, FAQ, Contact)
+  const [activeCmsModal, setActiveCmsModal] = useState<'about' | 'faq' | 'terms' | 'contact' | 'privacy' | null>(null);
+  const [cmsPageData, setCmsPageData] = useState<any>(null);
+  const [isLoadingCms, setIsLoadingCms] = useState(false);
+  const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
+
+  // Contact Form inside Mobile Modal
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+
   const [myEnquiries, setMyEnquiries] = useState<any[]>([
     {
       referenceNo: 'ENQ-2026-HYD-9812',
@@ -277,6 +292,62 @@ export default function App() {
       Alert.alert('Registration Error', err?.message || 'Could not save business to database.');
     } finally {
       setIsSubmittingBiz(false);
+    }
+  };
+
+  const openCmsPage = async (slug: 'about' | 'faq' | 'terms' | 'contact' | 'privacy') => {
+    setActiveCmsModal(slug);
+    setIsLoadingCms(true);
+    setContactSuccess(false);
+    try {
+      const res = await fetch(`${API_BASE}/cms/pages/${slug}?lang=en`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setCmsPageData(json.data);
+      } else {
+        setCmsPageData(null);
+      }
+    } catch (e) {
+      console.log('Error fetching CMS page:', e);
+      setCmsPageData(null);
+    } finally {
+      setIsLoadingCms(false);
+    }
+  };
+
+  const handleContactSubmit = async () => {
+    if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) {
+      Alert.alert('Required Fields', 'Please enter your name, email, and message.');
+      return;
+    }
+    setIsSubmittingContact(true);
+    try {
+      const res = await fetch(`${API_BASE}/cms/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: contactName.trim(),
+          email: contactEmail.trim(),
+          phone: contactPhone.trim() || undefined,
+          subject: contactSubject.trim() || 'Mobile Contact Message',
+          message: contactMessage.trim()
+        })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Failed to submit contact message');
+      }
+      setContactSuccess(true);
+      setContactName('');
+      setContactEmail('');
+      setContactPhone('');
+      setContactSubject('');
+      setContactMessage('');
+      Alert.alert('Message Sent & Saved in DB! 🎉', 'Your message has been stored in MySQL hello_db. Our team will reach out to you shortly.');
+    } catch (e: any) {
+      Alert.alert('Submission Error', e?.message || 'Could not send message.');
+    } finally {
+      setIsSubmittingContact(false);
     }
   };
 
@@ -666,6 +737,98 @@ export default function App() {
                 </View>
               </View>
             )}
+
+            {/* COMPANY INFORMATION & CMS PAGES (STORED IN DB) */}
+            <View style={{ marginTop: 20 }}>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Company & Information (Live DB)
+              </Text>
+
+              {/* 1. About Us */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('about')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#EFF6FF' }]}>
+                    <Text style={{ fontSize: 16 }}>ℹ️</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>About Hello-Hi</Text>
+                    <Text style={styles.cmsMenuSub}>Mission, pillars & verified discovery engine</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+
+              {/* 2. FAQs */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('faq')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FAF5FF' }]}>
+                    <Text style={{ fontSize: 16 }}>❓</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>Frequently Asked Questions (FAQ)</Text>
+                    <Text style={styles.cmsMenuSub}>Instant answers about verification & quotes</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+
+              {/* 3. Terms & Conditions */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('terms')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F0FDF4' }]}>
+                    <Text style={{ fontSize: 16 }}>📜</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>Terms & Conditions</Text>
+                    <Text style={styles.cmsMenuSub}>Platform rules, merchant & customer policy</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+
+              {/* 4. Contact & Support */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('contact')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FFF7ED' }]}>
+                    <Text style={{ fontSize: 16 }}>📞</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>Contact Us & Support</Text>
+                    <Text style={styles.cmsMenuSub}>Toll-free, WhatsApp desk & DB enquiry form</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+
+              {/* 5. Privacy Policy */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('privacy')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F8FAFC' }]}>
+                    <Text style={{ fontSize: 16 }}>🛡️</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>Privacy Policy (DPDP Act 2023)</Text>
+                    <Text style={styles.cmsMenuSub}>Data minimization & encryption protections</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           /* ================= HOME TAB (MAIN HUB) ================= */
@@ -1084,17 +1247,24 @@ export default function App() {
                 </View>
 
                 {/* Terms and Conditions Checkbox */}
-                <TouchableOpacity
-                  onPress={() => setAgreedTerms(!agreedTerms)}
-                  style={styles.termsRow}
-                >
-                  <View style={[styles.checkbox, agreedTerms && styles.checkboxChecked]}>
+                <View style={styles.termsRow}>
+                  <TouchableOpacity
+                    onPress={() => setAgreedTerms(!agreedTerms)}
+                    style={[styles.checkbox, agreedTerms && styles.checkboxChecked]}
+                  >
                     {agreedTerms && <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>✓</Text>}
-                  </View>
+                  </TouchableOpacity>
                   <Text style={styles.termsText}>
-                    I Agree to <Text style={{ color: '#0076D7', fontWeight: '700' }}>Terms and Conditions</Text> & <Text style={{ color: '#0076D7', fontWeight: '700' }}>Privacy Policy</Text>
+                    I Agree to{' '}
+                    <Text onPress={() => openCmsPage('terms')} style={{ color: '#0076D7', fontWeight: '700' }}>
+                      Terms and Conditions
+                    </Text>{' '}
+                    &{' '}
+                    <Text onPress={() => openCmsPage('privacy')} style={{ color: '#0076D7', fontWeight: '700' }}>
+                      Privacy Policy
+                    </Text>
                   </Text>
-                </TouchableOpacity>
+                </View>
 
                 {/* Action Button: Login with OTP / Register with OTP */}
                 <TouchableOpacity
@@ -1176,6 +1346,8 @@ export default function App() {
             </TouchableOpacity>
           </View>
         </View>
+      </Modal>
+
       {/* BUSINESS DETAILS MODAL (OPENED ON CARD CLICK) */}
       {selectedBusiness && (
         <Modal visible={true} transparent animationType="slide">
@@ -1457,6 +1629,216 @@ export default function App() {
               ) : (
                 <Text style={styles.authActionBtnText}>Register Business Free in MySQL 🚀</Text>
               )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* CMS PAGE MODAL (ABOUT, FAQ, TERMS, CONTACT, PRIVACY - LOADED FROM DB) */}
+      <Modal visible={activeCmsModal !== null} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.cmsModalContainer}>
+            {/* Header */}
+            <View style={styles.cmsModalHeader}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#16A34A', textTransform: 'uppercase' }}>
+                    ● MySQL hello_db
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#94A3B8' }}>• Public API</Text>
+                </View>
+                <Text style={styles.cmsModalTitle}>
+                  {cmsPageData?.title || (
+                    activeCmsModal === 'about' ? 'About Hello-Hi' :
+                    activeCmsModal === 'faq' ? 'Frequently Asked Questions' :
+                    activeCmsModal === 'terms' ? 'Terms & Conditions' :
+                    activeCmsModal === 'contact' ? 'Contact & Support' : 'Privacy Policy'
+                  )}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setActiveCmsModal(null)} style={styles.closeModalCircle}>
+                <Text style={{ fontSize: 16, color: '#64748B', fontWeight: '800' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isLoadingCms ? (
+              <View style={{ padding: 40, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="large" color="#0076D7" />
+                <Text style={{ marginTop: 12, fontSize: 12, color: '#64748B', fontWeight: '600' }}>
+                  Loading content from database...
+                </Text>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 520 }} showsVerticalScrollIndicator={false}>
+                {/* Short Description */}
+                {cmsPageData?.shortDescription ? (
+                  <View style={styles.cmsDescBox}>
+                    <Text style={styles.cmsDescText}>{cmsPageData.shortDescription}</Text>
+                  </View>
+                ) : null}
+
+                {/* SPECIAL SECTION: FAQ ITEMS ACCORDION */}
+                {activeCmsModal === 'faq' && cmsPageData?.faqItems && Array.isArray(cmsPageData.faqItems) ? (
+                  <View style={{ marginTop: 10, marginBottom: 12 }}>
+                    <Text style={styles.sectionHeaderTitle}>Frequently Asked Questions ({cmsPageData.faqItems.length})</Text>
+                    {cmsPageData.faqItems.map((item: any, idx: number) => {
+                      const isExpanded = expandedFaqIndex === idx;
+                      return (
+                        <TouchableOpacity
+                          key={item.id || idx}
+                          activeOpacity={0.8}
+                          onPress={() => setExpandedFaqIndex(isExpanded ? null : idx)}
+                          style={styles.faqAccordionCard}
+                        >
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.faqQuestionText}>
+                              {idx + 1}. {item.question}
+                            </Text>
+                            <Text style={{ fontSize: 14, color: '#0076D7', fontWeight: 'bold' }}>
+                              {isExpanded ? '▲' : '▼'}
+                            </Text>
+                          </View>
+                          {isExpanded && (
+                            <Text style={styles.faqAnswerText}>
+                              {item.answer}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                {/* SPECIAL SECTION: CONTACT & SUPPORT CHANNELS & FORM */}
+                {activeCmsModal === 'contact' ? (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={styles.sectionHeaderTitle}>Official Support Helplines</Text>
+                    
+                    <View style={{ gap: 8, marginVertical: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => Alert.alert('Dialing Toll Free', 'Connecting to 1800-425-HELLO (43556)...')}
+                        style={styles.contactActionPill}
+                      >
+                        <Text style={{ fontSize: 18 }}>📞</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>Toll Free Helpline</Text>
+                          <Text style={{ fontSize: 11, color: '#0076D7', fontWeight: '700' }}>1800-425-HELLO (43556)</Text>
+                        </View>
+                        <Text style={styles.callBadge}>Tap to Call</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => Alert.alert('Opening WhatsApp', 'Connecting to +91 98480 22338 WhatsApp Desk...')}
+                        style={styles.contactActionPill}
+                      >
+                        <Text style={{ fontSize: 18 }}>💬</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>WhatsApp Support Desk</Text>
+                          <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '700' }}>+91 98480 22338</Text>
+                        </View>
+                        <Text style={[styles.callBadge, { backgroundColor: '#DCFCE7', color: '#16A34A' }]}>Chat Now</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Direct Contact Form Stored in DB */}
+                    <View style={styles.contactFormBox}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginBottom: 2 }}>
+                        Send Support Message
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#64748B', marginBottom: 10 }}>
+                        Stored in MySQL hello_db.contact_submissions.
+                      </Text>
+
+                      <Text style={styles.fieldLabel}>Your Name *</Text>
+                      <TextInput
+                        style={styles.modalTextInput}
+                        placeholder="e.g. Anand Varma"
+                        placeholderTextColor="#94A3B8"
+                        value={contactName}
+                        onChangeText={setContactName}
+                      />
+
+                      <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Email Address *</Text>
+                      <TextInput
+                        style={styles.modalTextInput}
+                        placeholder="e.g. anand@example.com"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="email-address"
+                        value={contactEmail}
+                        onChangeText={setContactEmail}
+                      />
+
+                      <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Mobile Number</Text>
+                      <TextInput
+                        style={styles.modalTextInput}
+                        placeholder="e.g. 98480 12345"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="phone-pad"
+                        value={contactPhone}
+                        onChangeText={setContactPhone}
+                      />
+
+                      <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Subject / Topic</Text>
+                      <TextInput
+                        style={styles.modalTextInput}
+                        placeholder="e.g. Business Listing, Verification..."
+                        placeholderTextColor="#94A3B8"
+                        value={contactSubject}
+                        onChangeText={setContactSubject}
+                      />
+
+                      <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Message *</Text>
+                      <TextInput
+                        style={[styles.modalTextInput, { height: 65 }]}
+                        placeholder="How can our support team help you?"
+                        placeholderTextColor="#94A3B8"
+                        multiline
+                        numberOfLines={3}
+                        value={contactMessage}
+                        onChangeText={setContactMessage}
+                      />
+
+                      <TouchableOpacity
+                        onPress={handleContactSubmit}
+                        disabled={isSubmittingContact}
+                        style={[styles.authActionBtn, { marginTop: 10 }]}
+                      >
+                        {isSubmittingContact ? (
+                          <ActivityIndicator color="#FFF" />
+                        ) : (
+                          <Text style={styles.authActionBtnText}>Send Message to DB 🚀</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* HTML / Plain Text Content from DB */}
+                {cmsPageData?.content ? (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={styles.sectionHeaderTitle}>Official Policy Documentation</Text>
+                    <Text style={styles.cmsContentText}>
+                      {cmsPageData.content.replace(/<[^>]+>/g, '\n').replace(/\n\s*\n/g, '\n\n').trim()}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.cmsFooterMeta}>
+                  <Text style={{ fontSize: 10, color: '#94A3B8' }}>
+                    Database Record ID: {cmsPageData?.id || 'live-db-record'}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#16A34A', fontWeight: '700' }}>
+                    Status: {cmsPageData?.status || 'PUBLISHED'} • {cmsPageData?.visibility || 'PUBLIC'}
+                  </Text>
+                </View>
+              </ScrollView>
+            )}
+
+            <TouchableOpacity
+              onPress={() => setActiveCmsModal(null)}
+              style={[styles.signOutBtn, { marginTop: 10, backgroundColor: '#0F172A' }]}
+            >
+              <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '800' }}>Close Page</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -2305,5 +2687,142 @@ const styles = StyleSheet.create({
   },
   citySelectBtnTextActive: {
     color: '#0076D7',
+  },
+  // CMS & Information Page Styles
+  cmsMenuItem: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cmsMenuIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cmsMenuTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  cmsMenuSub: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  cmsModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    width: '100%',
+    maxWidth: 440,
+    maxHeight: '90%',
+  },
+  cmsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  cmsModalTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  cmsDescBox: {
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#0076D7',
+    marginVertical: 8,
+  },
+  cmsDescText: {
+    fontSize: 11,
+    color: '#475569',
+    lineHeight: 16,
+  },
+  sectionHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0F172A',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  faqAccordionCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 8,
+  },
+  faqQuestionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    flex: 1,
+    paddingRight: 8,
+  },
+  faqAnswerText: {
+    fontSize: 11,
+    color: '#475569',
+    lineHeight: 16,
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  contactActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 10,
+  },
+  callBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0076D7',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  contactFormBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 10,
+  },
+  cmsContentText: {
+    fontSize: 12,
+    color: '#334155',
+    lineHeight: 18,
+  },
+  cmsFooterMeta: {
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });

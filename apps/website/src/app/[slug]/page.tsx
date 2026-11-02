@@ -2,22 +2,46 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
-import { ShieldCheck, ChevronRight, Home, HelpCircle } from "lucide-react";
+import { ShieldCheck, ChevronRight, Home, HelpCircle, FileText, Phone, Info } from "lucide-react";
 import { DesktopFooter } from "@/components/DesktopFooter";
+import { ContactForm } from "@/components/ContactForm";
 
 const CMS_ALLOWED_SLUGS = [
+  "terms",
   "terms-and-conditions",
+  "privacy",
   "privacy-policy",
+  "faq",
   "faqs",
+  "about",
   "about-us",
+  "refund",
   "refund-cancellation-policy",
-  "contact-support"
+  "contact",
+  "contact-us",
+  "contact-support",
+  "cookie-policy",
+  "community-guidelines"
 ];
+
+function resolveSlug(slug: string): string {
+  const map: Record<string, string> = {
+    contact: "contact-support",
+    "contact-us": "contact-support",
+    terms: "terms-and-conditions",
+    faq: "faqs",
+    about: "about-us",
+    privacy: "privacy-policy",
+    refund: "refund-cancellation-policy",
+  };
+  return map[slug.toLowerCase()] || slug;
+}
 
 async function getCMSPage(slug: string) {
   try {
-    const res = await fetch(`http://localhost:4000/api/v1/cms/public/${slug}?lang=en`, {
-      next: { revalidate: 60 }
+    const canonical = resolveSlug(slug);
+    const res = await fetch(`http://localhost:4000/api/v1/cms/public/${canonical}?lang=en`, {
+      next: { revalidate: 30 }
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -28,10 +52,11 @@ async function getCMSPage(slug: string) {
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  if (!CMS_ALLOWED_SLUGS.includes(params.slug)) {
+  const target = resolveSlug(params.slug);
+  if (!CMS_ALLOWED_SLUGS.includes(params.slug) && !CMS_ALLOWED_SLUGS.includes(target)) {
     return { title: "Page Not Found | Hello-Hi" };
   }
-  const page = await getCMSPage(params.slug);
+  const page = await getCMSPage(target);
   if (!page) {
     return {
       title: `${params.slug.replace(/-/g, " ")} | Hello-Hi`,
@@ -46,11 +71,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function PublicCMSPage({ params }: { params: { slug: string } }) {
-  if (!CMS_ALLOWED_SLUGS.includes(params.slug)) {
+  const canonical = resolveSlug(params.slug);
+  if (!CMS_ALLOWED_SLUGS.includes(params.slug) && !CMS_ALLOWED_SLUGS.includes(canonical)) {
     notFound();
   }
 
-  const page = await getCMSPage(params.slug);
+  const page = await getCMSPage(canonical);
+  const isContactPage = canonical === "contact-support";
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between">
@@ -80,6 +107,56 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
 
       {/* Main Content Article */}
       <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10 flex-1 space-y-6">
+        
+        {/* Navigation Tabs between Core Informational Pages */}
+        <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-2xs">
+          <Link
+            href="/about-us"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              canonical === "about-us" ? "bg-[#0076D7] text-white shadow-2xs" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <Info className="w-3.5 h-3.5" />
+            <span>About Us</span>
+          </Link>
+          <Link
+            href="/faqs"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              canonical === "faqs" ? "bg-[#0076D7] text-white shadow-2xs" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span>FAQs</span>
+          </Link>
+          <Link
+            href="/terms-and-conditions"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              canonical === "terms-and-conditions" ? "bg-[#0076D7] text-white shadow-2xs" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Terms & Conditions</span>
+          </Link>
+          <Link
+            href="/contact-support"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              canonical === "contact-support" ? "bg-[#0076D7] text-white shadow-2xs" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <Phone className="w-3.5 h-3.5" />
+            <span>Contact & Support</span>
+          </Link>
+          <Link
+            href="/privacy-policy"
+            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+              canonical === "privacy-policy" ? "bg-[#0076D7] text-white shadow-2xs" : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Privacy Policy</span>
+          </Link>
+        </div>
+
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
           <Link href="/" className="hover:text-slate-800 flex items-center gap-1">
@@ -87,7 +164,7 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
             <span>Home</span>
           </Link>
           <ChevronRight className="w-3 h-3 text-slate-400" />
-          <span>Policies &amp; Legal</span>
+          <span>Policies & Information</span>
           <ChevronRight className="w-3 h-3 text-slate-400" />
           <span className="text-slate-900 font-bold">
             {page?.title || params.slug.replace(/-/g, " ")}
@@ -99,7 +176,7 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
           <div className="border-b border-slate-100 pb-6 space-y-2">
             <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Official Public Documentation</span>
+              <span>Official Database Record • hello_db</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               {page?.title || params.slug.replace(/-/g, " ")}
@@ -110,7 +187,7 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
               </p>
             )}
             <div className="text-[11px] text-slate-400 pt-1">
-              <span>Last updated: {page?.updatedAt ? new Date(page.updatedAt).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" }) : "October 2024"}</span>
+              <span>Last updated: {page?.updatedAt ? new Date(page.updatedAt).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" }) : "October 2026"}</span>
             </div>
           </div>
 
@@ -119,7 +196,7 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
             <div className="space-y-4 pt-2">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <HelpCircle className="w-4 h-4 text-[#0076D7]" />
-                <span>Frequently Asked Questions</span>
+                <span>Frequently Asked Questions ({page.faqItems.length})</span>
               </h2>
               <div className="space-y-3">
                 {page.faqItems.map((item: any, idx: number) => (
@@ -138,11 +215,14 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
 
           {/* Article HTML Body */}
           <article
-            className="prose prose-slate max-w-none text-xs sm:text-sm leading-relaxed text-slate-800"
+            className="prose prose-slate max-w-none text-xs sm:text-sm leading-relaxed text-slate-800 space-y-3"
             dangerouslySetInnerHTML={{
               __html: page?.content || "<p>Please visit the Super Admin console to publish content for this section.</p>"
             }}
           />
+
+          {/* If Contact Page, render Interactive Contact Form */}
+          {isContactPage && <ContactForm />}
         </div>
       </main>
 
