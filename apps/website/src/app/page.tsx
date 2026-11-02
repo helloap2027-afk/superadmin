@@ -539,7 +539,7 @@ function HomeExploreContent() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] overflow-x-clip w-full max-w-full">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC] w-full max-w-full">
       {/* 1. STICKY DESKTOP HEADER & CATEGORIES RIBBON */}
       <DesktopHeader
         selectedCity={selectedCity}
@@ -569,7 +569,7 @@ function HomeExploreContent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* LEFT COLUMN: FILTERS & CATEGORIES (3 cols) - STICKY */}
-          <aside className="lg:col-span-3 lg:sticky lg:top-24 self-start">
+          <aside className="lg:col-span-3 lg:sticky lg:top-[116px] self-start z-20">
             <DesktopFilterSidebar
               selectedCity={selectedCity}
               selectedCategory={selectedCategory}
@@ -983,7 +983,7 @@ function HomeExploreContent() {
           </section>
 
           {/* RIGHT COLUMN: INSTANT BEST DEAL QUOTES & TRENDING (3 cols) - STICKY */}
-          <aside id="right-deals-sidebar" className="lg:col-span-3 lg:sticky lg:top-24 self-start">
+          <aside id="right-deals-sidebar" className="lg:col-span-3 lg:sticky lg:top-[116px] self-start z-20">
             <DesktopRightSidebar
               selectedCity={selectedCity}
               onSearchTopic={(topic) => setSearchQuery(topic)}
