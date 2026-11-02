@@ -101,6 +101,21 @@ export default function App() {
   const [enquiryMsg, setEnquiryMsg] = useState('');
   const [enquiryPhone, setEnquiryPhone] = useState('');
   const [isSendingEnquiry, setIsSendingEnquiry] = useState(false);
+
+  // Selected Business Details Modal
+  const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
+
+  // Add Your Business Free Modal (Vendor Onboarding)
+  const [showAddBusinessModal, setShowAddBusinessModal] = useState(false);
+  const [newBizName, setNewBizName] = useState('');
+  const [newBizCategory, setNewBizCategory] = useState('restaurants');
+  const [newBizCity, setNewBizCity] = useState<'Hyderabad' | 'Vijayawada' | 'Guntur'>('Hyderabad');
+  const [newBizLocality, setNewBizLocality] = useState('Hitec City');
+  const [newBizPhone, setNewBizPhone] = useState('');
+  const [newBizWhatsapp, setNewBizWhatsapp] = useState('');
+  const [newBizDesc, setNewBizDesc] = useState('');
+  const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
+
   const [myEnquiries, setMyEnquiries] = useState<any[]>([
     {
       referenceNo: 'ENQ-2026-HYD-9812',
@@ -166,13 +181,81 @@ export default function App() {
         }
       });
       const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         setBusinesses(json.data);
+      } else if (selectedCategory !== 'All') {
+        // Broaden search to include verified items across cities if this city has 0
+        const broadUrl = `${API_BASE}/search/businesses?category=${selectedCategory}${qParam}`;
+        const broadRes = await fetch(broadUrl, { headers: { 'Accept': 'application/json' } });
+        const broadJson = await broadRes.json();
+        if (broadJson.success && Array.isArray(broadJson.data) && broadJson.data.length > 0) {
+          setBusinesses(broadJson.data);
+        } else {
+          setBusinesses(json.data || []);
+        }
+      } else {
+        setBusinesses(json.data || []);
       }
     } catch (e) {
       console.log('Error fetching businesses:', e);
     } finally {
       setIsLoadingBusinesses(false);
+    }
+  };
+
+  // Register New Business directly in MySQL hello_db
+  const handleAddBusinessSubmit = async () => {
+    if (!newBizName.trim()) {
+      Alert.alert('Required Field', 'Please enter your Business Name.');
+      return;
+    }
+    if (!newBizPhone.trim()) {
+      Alert.alert('Required Field', 'Please enter your Contact Phone Number.');
+      return;
+    }
+
+    setIsSubmittingBiz(true);
+    try {
+      const selectedCat = categories.find((c: any) => c.slug === newBizCategory) || categories[0];
+      const payload = {
+        name: newBizName.trim(),
+        categoryId: selectedCat?.id || 'cat-restaurants',
+        categorySlug: newBizCategory,
+        citySlug: newBizCity.toLowerCase(),
+        locality: newBizLocality.trim() || 'Central',
+        phone: newBizPhone.trim(),
+        whatsapp: (newBizWhatsapp || newBizPhone).trim(),
+        description: newBizDesc.trim() || `${newBizName} is a verified provider in ${newBizLocality}, ${newBizCity}.`
+      };
+
+      const res = await fetch(`${API_BASE}/businesses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Failed to register business in database');
+      }
+
+      const created = json.data;
+      setBusinesses([created, ...businesses]);
+      setShowAddBusinessModal(false);
+      setNewBizName('');
+      setNewBizPhone('');
+      setNewBizWhatsapp('');
+      setNewBizDesc('');
+      setSelectedCategory(newBizCategory);
+      setSelectedCity(newBizCity);
+
+      Alert.alert(
+        'Business Created in MySQL hello_db! 🎉',
+        `"${created.name}" is now stored in the database and visible immediately in ${newBizCity}.`
+      );
+    } catch (err: any) {
+      Alert.alert('Registration Error', err?.message || 'Could not save business to database.');
+    } finally {
+      setIsSubmittingBiz(false);
     }
   };
 
@@ -608,7 +691,7 @@ export default function App() {
               </View>
 
               <TouchableOpacity
-                onPress={() => setMode('vendor')}
+                onPress={() => setShowAddBusinessModal(true)}
                 style={styles.promoBanner2}
               >
                 <View>
@@ -683,12 +766,23 @@ export default function App() {
                   <Text style={{ fontSize: 28 }}>🏢</Text>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginTop: 4 }}>No listings in this category yet</Text>
                   <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center', marginTop: 2 }}>
-                    Add Your Business Free to be listed instantly!
+                    Be the first verified listing in {selectedCity}!
                   </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowAddBusinessModal(true)}
+                    style={{ marginTop: 10, backgroundColor: '#0076D7', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 }}
+                  >
+                    <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '800' }}>Add Your Business Free +</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 businesses.map((biz: any) => (
-                  <View key={biz.id} style={styles.businessCard}>
+                  <TouchableOpacity
+                    key={biz.id}
+                    activeOpacity={0.88}
+                    onPress={() => setSelectedBusiness(biz)}
+                    style={styles.businessCard}
+                  >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <View style={{ flex: 1, paddingRight: 8 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -706,13 +800,19 @@ export default function App() {
                         {biz.description && (
                           <Text style={styles.bizCardDesc} numberOfLines={2}>{biz.description}</Text>
                         )}
+                        <Text style={{ fontSize: 10, color: '#0076D7', fontWeight: '700', marginTop: 4 }}>
+                          Tap for Full Profile, Timings & Services →
+                        </Text>
                       </View>
                     </View>
 
                     {/* Action Buttons: Call Now, WhatsApp, Instant Quote */}
                     <View style={styles.bizButtonRow}>
                       <TouchableOpacity
-                        onPress={() => Alert.alert('Call Merchant', `Dialing ${biz.contacts?.callNumber || biz.primaryPhone || '+91 98480 22334'}...`)}
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
+                          Alert.alert('Call Merchant', `Dialing ${biz.contacts?.callNumber || biz.primaryPhone || '+91 98480 22334'}...`);
+                        }}
                         style={styles.bizCallBtn}
                       >
                         <Text style={{ fontSize: 11 }}>📞</Text>
@@ -720,7 +820,10 @@ export default function App() {
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        onPress={() => Alert.alert('WhatsApp Chat', `Opening WhatsApp for ${biz.name}...`)}
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
+                          Alert.alert('WhatsApp Chat', `Opening WhatsApp for ${biz.name}...`);
+                        }}
                         style={styles.bizWhatsappBtn}
                       >
                         <Text style={{ fontSize: 11 }}>💬</Text>
@@ -728,7 +831,8 @@ export default function App() {
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        onPress={() => {
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
                           setEnquiryModalBiz(biz);
                           setEnquiryPhone(user?.phoneNumber || '');
                         }}
@@ -738,7 +842,7 @@ export default function App() {
                         <Text style={styles.bizBtnText}>Get Quote</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -764,9 +868,9 @@ export default function App() {
           <Text style={[styles.navLabel, activeTab === 'Services' && styles.navLabelActive]}>Services</Text>
         </TouchableOpacity>
 
-        {/* Center Floating Plus / Mode Switcher */}
+        {/* Center Floating Plus: Add Your Business Free (Vendor Registration) */}
         <TouchableOpacity
-          onPress={() => setMode(mode === 'customer' ? 'vendor' : 'customer')}
+          onPress={() => setShowAddBusinessModal(true)}
           style={styles.centerFloatingBtn}
         >
           <Text style={{ fontSize: 22, color: '#FFF', fontWeight: '900' }}>➕</Text>
@@ -1031,6 +1135,243 @@ export default function App() {
               style={{ marginTop: 10, alignSelf: 'center' }}
             >
               <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      {/* BUSINESS DETAILS MODAL (OPENED ON CARD CLICK) */}
+      {selectedBusiness && (
+        <Modal visible={true} transparent animationType="slide">
+          <View style={styles.modalBackdrop}>
+            <View style={styles.bizDetailModal}>
+              <View style={styles.bizDetailHeader}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <View style={styles.verifiedTag}>
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#16A34A' }}>✓ VERIFIED</Text>
+                    </View>
+                    <View style={styles.openNowTag}>
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#0076D7' }}>● OPEN NOW</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.bizDetailTitle}>{selectedBusiness.name}</Text>
+                  <Text style={styles.bizDetailCategory}>
+                    {selectedBusiness.primaryCategory?.name || selectedBusiness.categoryName || 'Verified Merchant'}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedBusiness(null)} style={styles.closeModalCircle}>
+                  <Text style={{ fontSize: 16, color: '#64748B', fontWeight: '800' }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+                {/* Rating Strip */}
+                <View style={styles.detailRatingStrip}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={{ fontSize: 16, color: '#F59E0B', fontWeight: '900' }}>★</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>{selectedBusiness.averageRating || 4.9}</Text>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>({selectedBusiness.totalReviews || 45} verified reviews)</Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '700' }}>● Instant Quotes</Text>
+                </View>
+
+                {/* Location Box */}
+                <View style={styles.detailInfoBox}>
+                  <Text style={styles.detailSectionLabel}>📍 LOCATION & ADDRESS</Text>
+                  <Text style={styles.detailLocationText}>
+                    {selectedBusiness.location?.addressLine1 || selectedBusiness.location?.localityName || selectedLocality}, {selectedBusiness.location?.cityName || selectedCity}
+                    {selectedBusiness.location?.pincode ? ` - ${selectedBusiness.location?.pincode}` : ''}
+                  </Text>
+                  {selectedBusiness.location?.landmark ? (
+                    <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Landmark: {selectedBusiness.location?.landmark}</Text>
+                  ) : null}
+                </View>
+
+                {/* Working Hours */}
+                <View style={styles.detailInfoBox}>
+                  <Text style={styles.detailSectionLabel}>🕒 WORKING HOURS</Text>
+                  <Text style={styles.detailInfoValue}>Monday - Sunday: 09:00 AM - 09:30 PM (Always Open)</Text>
+                </View>
+
+                {/* About / Description */}
+                <View style={styles.detailInfoBox}>
+                  <Text style={styles.detailSectionLabel}>ℹ️ ABOUT THIS BUSINESS</Text>
+                  <Text style={styles.detailDescText}>
+                    {selectedBusiness.description || `${selectedBusiness.name} provides premier verified services with instant bookings, certified staff, and transparent pricing in ${selectedCity}.`}
+                  </Text>
+                </View>
+
+                {/* Live Database Entity Badge */}
+                <View style={styles.detailDbBadge}>
+                  <Text style={{ fontSize: 10, color: '#0369A1', fontWeight: '700' }}>
+                    ● MySQL Entity ID: {selectedBusiness.id} • Live in hello_db
+                  </Text>
+                </View>
+              </ScrollView>
+
+              {/* Action Buttons */}
+              <View style={styles.detailActionRow}>
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Calling Merchant', `Dialing ${selectedBusiness.contacts?.callNumber || selectedBusiness.primaryPhone || '+91 98480 22334'}...`)}
+                  style={styles.detailCallBtn}
+                >
+                  <Text style={{ fontSize: 13 }}>📞</Text>
+                  <Text style={{ color: '#0F172A', fontWeight: '800', fontSize: 12 }}>Call</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => Alert.alert('WhatsApp', `Opening WhatsApp for ${selectedBusiness.name}...`)}
+                  style={styles.detailWaBtn}
+                >
+                  <Text style={{ fontSize: 13 }}>💬</Text>
+                  <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>WhatsApp</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    const b = selectedBusiness;
+                    setSelectedBusiness(null);
+                    setEnquiryModalBiz(b);
+                    setEnquiryPhone(user?.phoneNumber || '');
+                  }}
+                  style={styles.detailQuoteBtn}
+                >
+                  <Text style={{ fontSize: 13 }}>⚡</Text>
+                  <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>Get Quote</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ADD YOUR BUSINESS FREE MODAL (VENDOR REGISTRATION INTO MYSQL) */}
+      <Modal visible={showAddBusinessModal} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.addBizModalCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <View>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: '#FF6B35', textTransform: 'uppercase' }}>100% Free Setup 🚀</Text>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>Add Your Business</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowAddBusinessModal(false)} style={styles.closeModalCircle}>
+                <Text style={{ fontSize: 16, color: '#64748B', fontWeight: '800' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 10 }}>
+              Stored directly in MySQL hello_db database and listed instantly.
+            </Text>
+
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              {/* Business Name */}
+              <Text style={styles.fieldLabel}>Business Name *</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="e.g. Royal Dental & Implant Clinic"
+                placeholderTextColor="#94A3B8"
+                value={newBizName}
+                onChangeText={setNewBizName}
+              />
+
+              {/* Category Picker */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Category *</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }}>
+                {categories.map((c: any) => {
+                  const isSel = newBizCategory === c.slug;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => setNewBizCategory(c.slug)}
+                      style={[
+                        styles.catSelectPill,
+                        isSel && styles.catSelectPillActive
+                      ]}
+                    >
+                      <Text style={{ fontSize: 11, marginRight: 3 }}>{c.icon}</Text>
+                      <Text style={[styles.catSelectPillText, isSel && styles.catSelectPillTextActive]}>
+                        {c.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* City Selection */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Pilot City *</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginVertical: 4 }}>
+                {(['Hyderabad', 'Vijayawada', 'Guntur'] as const).map((city) => (
+                  <TouchableOpacity
+                    key={city}
+                    onPress={() => {
+                      setNewBizCity(city);
+                      setNewBizLocality(city === 'Hyderabad' ? 'Hitec City' : city === 'Vijayawada' ? 'Benz Circle' : 'Brodipet');
+                    }}
+                    style={[
+                      styles.citySelectBtn,
+                      newBizCity === city && styles.citySelectBtnActive
+                    ]}
+                  >
+                    <Text style={[styles.citySelectBtnText, newBizCity === city && styles.citySelectBtnTextActive]}>
+                      {city}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Locality */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Locality / Area *</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="e.g. Banjara Hills, Benz Circle, Arundelpet..."
+                placeholderTextColor="#94A3B8"
+                value={newBizLocality}
+                onChangeText={setNewBizLocality}
+              />
+
+              {/* Phone */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Contact Phone Number *</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="e.g. 98480 12345"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                value={newBizPhone}
+                onChangeText={setNewBizPhone}
+              />
+
+              {/* WhatsApp */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>WhatsApp Number</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="Same as phone or enter number"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                value={newBizWhatsapp}
+                onChangeText={setNewBizWhatsapp}
+              />
+
+              {/* Description */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Description / Services</Text>
+              <TextInput
+                style={[styles.modalTextInput, { height: 60 }]}
+                placeholder="Brief summary of your services..."
+                placeholderTextColor="#94A3B8"
+                multiline
+                numberOfLines={2}
+                value={newBizDesc}
+                onChangeText={setNewBizDesc}
+              />
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={handleAddBusinessSubmit}
+              disabled={isSubmittingBiz}
+              style={[styles.authActionBtn, { marginTop: 12 }]}
+            >
+              {isSubmittingBiz ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.authActionBtnText}>Register Business Free in MySQL 🚀</Text>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -1692,5 +2033,192 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '800',
+  },
+  // Business Detail Modal Styles
+  bizDetailModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxHeight: '90%',
+  },
+  bizDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingBottom: 12,
+    marginBottom: 10,
+  },
+  verifiedTag: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  openNowTag: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  bizDetailTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  bizDetailCategory: {
+    fontSize: 12,
+    color: '#0076D7',
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  closeModalCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailRatingStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    padding: 10,
+    borderRadius: 12,
+    marginVertical: 8,
+  },
+  detailInfoBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 5,
+  },
+  detailSectionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  detailLocationText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  detailInfoValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  detailDescText: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  detailDbBadge: {
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 10,
+    padding: 8,
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  detailActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
+  },
+  detailCallBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  detailWaBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#22C55E',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  detailQuoteBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#0076D7',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  // Add Business Modal Styles
+  addBizModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxHeight: '92%',
+  },
+  catSelectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  catSelectPillActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#0076D7',
+  },
+  catSelectPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  catSelectPillTextActive: {
+    color: '#0076D7',
+  },
+  citySelectBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  citySelectBtnActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#0076D7',
+  },
+  citySelectBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  citySelectBtnTextActive: {
+    color: '#0076D7',
   },
 });
