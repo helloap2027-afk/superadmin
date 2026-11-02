@@ -128,8 +128,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/categories`, {
         headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Accept': 'application/json'
         }
       });
       const json = await res.json();
@@ -163,8 +162,7 @@ export default function App() {
       const url = `${API_BASE}/search/businesses?city=${selectedCity.toLowerCase()}${catParam}${qParam}`;
       const res = await fetch(url, {
         headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Accept': 'application/json'
         }
       });
       const json = await res.json();
