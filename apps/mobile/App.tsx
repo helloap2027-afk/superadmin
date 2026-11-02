@@ -406,17 +406,31 @@ export default function App() {
                   </>
                 )}
 
-                <Text style={styles.fieldLabel}>Mobile Number *</Text>
                 <View style={styles.inputContainer}>
                   <Text style={styles.prefix}>+91</Text>
+                  <Text style={{ color: '#CBD5E1', marginRight: 8, fontSize: 16 }}>|</Text>
                   <TextInput
                     style={styles.input}
-                    placeholder="9848012345"
+                    placeholder="Enter Mobile Number"
+                    placeholderTextColor="#94A3B8"
                     keyboardType="number-pad"
                     maxLength={10}
                     value={phoneNumber}
                     onChangeText={setPhoneNumber}
                   />
+                </View>
+
+                {/* Checkbox: I Agree to Terms and Conditions */}
+                <View style={{ alignItems: 'center', marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Text style={{ fontSize: 13, color: '#0070E0' }}>☑</Text>
+                    <Text style={{ fontSize: 12, color: '#334155', fontWeight: '600' }}>
+                      I Agree to Terms and Conditions
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#64748B', textDecorationLine: 'underline' }}>
+                    T&C's Privacy Policy
+                  </Text>
                 </View>
               </ScrollView>
             ) : (
@@ -432,7 +446,7 @@ export default function App() {
             )}
 
             <TouchableOpacity
-              style={styles.actionBtn}
+              style={[styles.actionBtn, { backgroundColor: '#0070E0' }]}
               onPress={authStep === 'phone' ? handleSendOtp : handleVerifyOtp}
               disabled={isLoading}
             >
@@ -441,11 +455,56 @@ export default function App() {
               ) : (
                 <Text style={styles.actionBtnText}>
                   {authStep === 'phone'
-                    ? (authMode === 'register' ? 'Register & Send OTP' : 'Send OTP Code')
+                    ? (authMode === 'register' ? 'Register with OTP' : 'Login with OTP')
                     : 'Verify OTP & Save to DB'}
                 </Text>
               )}
             </TouchableOpacity>
+
+            {/* Divider: Or Login Using & Google */}
+            {authStep === 'phone' && (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10, width: '100%' }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
+                  <Text style={{ paddingHorizontal: 10, paddingVertical: 2, fontSize: 10, color: '#64748B', backgroundColor: '#F1F5F9', borderRadius: 10, fontWeight: '600' }}>
+                    {authMode === 'register' ? 'Or Register Using' : 'Or Login Using'}
+                  </Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
+                </View>
+
+                {/* Google Button */}
+                <TouchableOpacity
+                  onPress={() => {
+                    const mockGoogleUser = {
+                      id: 'usr_google_' + Date.now(),
+                      fullName: fullName || 'Verified Google Member',
+                      phoneNumber: '+919848012345',
+                      preferredLanguage: selectedLanguage,
+                      status: 'ACTIVE',
+                      roles: ['CUSTOMER']
+                    };
+                    setUser(mockGoogleUser);
+                    setIsAuthModalVisible(false);
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#FFFFFF',
+                    borderWidth: 1,
+                    borderColor: '#CBD5E1',
+                    borderRadius: 12,
+                    paddingVertical: 10,
+                    width: '100%',
+                    marginBottom: 8,
+                    gap: 8,
+                  }}
+                >
+                  <Text style={{ fontSize: 15 }}>🌐</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1E293B' }}>Google</Text>
+                </TouchableOpacity>
+              </>
+            )}
 
             <TouchableOpacity
               onPress={() => {
