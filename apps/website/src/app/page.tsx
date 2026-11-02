@@ -1764,23 +1764,46 @@ function HomeExploreContent() {
       <div className="fixed right-3 bottom-24 z-50 flex flex-col gap-2">
         <div 
           onClick={() => alert("📱 Download Hello-Hi Android App on Google Play Store")}
-          className="bg-[#0B1220] hover:bg-slate-900 text-white px-3 py-2 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition flex items-center gap-2 select-none"
+          className="bg-[#0B1220] hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition flex items-center gap-2.5 select-none hover:scale-105 active:scale-95 group"
+          title="Download on Google Play Store"
         >
-          <span className="text-emerald-400 text-lg">🤖</span>
+          {/* Authentic Google Play Store Multi-Color Icon */}
+          <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none">
+            <path
+              d="M3.609 1.813A2.083 2.083 0 0 0 3 3.327v17.346c0 .594.225 1.134.609 1.514l.08.074 9.715-9.715v-.228L3.689 1.739l-.08.074z"
+              fill="#00D2FF"
+            />
+            <path
+              d="M16.634 15.539l-3.23-3.23v-.228l3.23-3.23.073.042 3.829 2.176c1.093.621 1.093 1.637 0 2.258l-3.829 2.176-.073.046z"
+              fill="#FFCE00"
+            />
+            <path
+              d="M13.404 12.081l-9.795 9.795c.422.447 1.107.498 1.892.052l11.133-6.326-3.23-3.521z"
+              fill="#FF3333"
+            />
+            <path
+              d="M13.404 11.919l3.23-3.521L5.501 2.072C4.716 1.626 4.031 1.677 3.609 2.124l9.795 9.795z"
+              fill="#00F076"
+            />
+          </svg>
           <div className="flex flex-col text-left leading-none">
             <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">GET APP</span>
-            <span className="text-xs font-black text-white">Android</span>
+            <span className="text-xs font-black text-white group-hover:text-emerald-400 transition">Android</span>
           </div>
         </div>
 
         <div 
           onClick={() => alert("🍎 Download Hello-Hi iOS App on Apple App Store")}
-          className="bg-[#0B1220] hover:bg-slate-900 text-white px-3 py-2 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition flex items-center gap-2 select-none"
+          className="bg-[#0B1220] hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition flex items-center gap-2.5 select-none hover:scale-105 active:scale-95 group"
+          title="Download on Apple App Store"
         >
-          <span className="text-white text-lg">🍏</span>
+          {/* Authentic Apple App Store Icon */}
+          <svg viewBox="0 0 384 512" className="w-5 h-5 shrink-0 fill-current text-white group-hover:text-slate-200 transition">
+            <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 66.2 30 148.8c14.7 39.4 39 88.5 76.5 89 33.7.6 44.2-22.3 84.7-22.3s50 22.3 84.7 21.7c37.5-.6 62.8-49.6 77.5-89 10.8-28.7 15.3-43.7 22.8-63.5-62-23.7-61.5-89.5-61.5-89.5zM250.7 94.6c15.2-19.2 25.5-45.7 22.7-72.6-22.5 1-49.6 15.2-65.7 34.4-14.2 16.8-26.7 44-23.4 70.3 25 .8 51.2-12.9 66.4-32.1z" />
+          </svg>
           <div className="flex flex-col text-left leading-none">
             <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">GET APP</span>
-            <span className="text-xs font-black text-white">iOS</span>
+            <span className="text-xs font-black text-white group-hover:text-blue-400 transition">iOS</span>
           </div>
         </div>
       </div>
