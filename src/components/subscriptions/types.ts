@@ -94,3 +94,4 @@ export interface PlanDetailsResponse {
     total: number;
   };
 }
+

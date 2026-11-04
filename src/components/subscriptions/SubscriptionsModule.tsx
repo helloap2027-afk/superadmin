@@ -34,6 +34,7 @@ import { PlanWizardModal } from "./PlanWizardModal";
 import { BenefitsLibraryModal } from "./BenefitsLibraryModal";
 import { PlanComparisonView } from "./PlanComparisonView";
 import { PlanVersionHistoryModal } from "./PlanVersionHistoryModal";
+import { PlanCustomerPreviewModal } from "./PlanCustomerPreviewModal";
 import {
   SubscriptionPlan,
   BenefitDefinition,
@@ -104,6 +105,7 @@ export function SubscriptionsModule() {
   const [wizardPlan, setWizardPlan] = useState<SubscriptionPlan | null>(null);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [historyPlan, setHistoryPlan] = useState<SubscriptionPlan | null>(null);
+  const [previewPlan, setPreviewPlan] = useState<SubscriptionPlan | null>(null);
 
   // Multi-select & Safe delete for subscribers
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -572,6 +574,14 @@ export function SubscriptionsModule() {
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
+                            onClick={() => setPreviewPlan(p)}
+                            className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                            title="Live Customer Preview (Web & Mobile)"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => handleOpenEditPlan(p)}
                             className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition border border-blue-200"
                             title="Edit Plan in Wizard"
@@ -672,6 +682,14 @@ export function SubscriptionsModule() {
                         </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewPlan(p)}
+                              className="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                              title="Customer Preview"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleOpenEditPlan(p)}
@@ -988,6 +1006,15 @@ export function SubscriptionsModule() {
           planId={historyPlan.id}
           planName={historyPlan.name}
           onClose={() => setHistoryPlan(null)}
+        />
+      )}
+
+      {/* Customer Preview Modal (Web & Mobile) */}
+      {previewPlan && (
+        <PlanCustomerPreviewModal
+          plan={previewPlan}
+          benefitsLibrary={benefits}
+          onClose={() => setPreviewPlan(null)}
         />
       )}
 
