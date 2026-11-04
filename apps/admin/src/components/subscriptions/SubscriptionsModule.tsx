@@ -500,10 +500,20 @@ export function SubscriptionsModule() {
       {plans.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider text-xs">
-              Merchant Tier Catalog
-            </h2>
-            <span className="text-xs text-slate-400">Fixed rate cards</span>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider text-xs">
+                Merchant Tier Catalog
+              </h2>
+              <span className="text-xs text-slate-400">Manage plan pricing, features, and active tiers</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenCreatePlan}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-[#0076D7] hover:bg-blue-700 rounded-xl transition shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create Plan</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -523,9 +533,33 @@ export function SubscriptionsModule() {
                   )}
 
                   <div>
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-bold text-slate-900">{p.name}</h3>
-                      <StatusBadge status={p.status} />
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">{p.name}</h3>
+                        <div className="mt-1">
+                          <StatusBadge status={p.status} />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditPlan(p)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition border border-blue-200"
+                          title="Update Plan"
+                        >
+                          <Edit2 className="w-3 h-3 text-blue-600" />
+                          <span>Update</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirmPlan(p)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition border border-red-200"
+                          title="Delete Plan"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-600" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">{p.description}</p>
