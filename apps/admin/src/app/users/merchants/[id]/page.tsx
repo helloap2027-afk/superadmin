@@ -76,6 +76,10 @@ export default function MerchantViewPage() {
   const [data, setData] = useState<MerchantDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isProcessingKyc, setIsProcessingKyc] = useState(false);
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
   const fetchMerchant = async () => {
     try {
@@ -98,6 +102,63 @@ export default function MerchantViewPage() {
   useEffect(() => {
     if (id) fetchMerchant();
   }, [id]);
+
+  const handleApproveKyc = async () => {
+    if (!data) return;
+    const recipientInfo = data.owner_email || data.support_email || "the partner";
+    if (!confirm(`Are you sure you want to approve KYC for "${data.name}"? This will verify documents, activate the Verified Trust Badge, and automatically trigger an approval confirmation email to ${recipientInfo}.`)) {
+      return;
+    }
+    try {
+      setIsProcessingKyc(true);
+      const res = await fetch(`${API_BASE}/admin/businesses/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setActionSuccessMsg(`KYC Approved successfully! Verified trust badge activated and notification email dispatched.`);
+        await fetchMerchant();
+        setTimeout(() => setActionSuccessMsg(null), 6000);
+      } else {
+        alert(json.message || "Approval failed");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsProcessingKyc(false);
+    }
+  };
+
+  const handleRejectKyc = async () => {
+    if (!data) return;
+    if (!rejectionReason.trim()) {
+      alert("Please provide a rejection reason explaining what documents need correction.");
+      return;
+    }
+    try {
+      setIsProcessingKyc(true);
+      const res = await fetch(`${API_BASE}/admin/businesses/${id}/reject`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: rejectionReason.trim() })
+      });
+      const json = await res.json();
+      if (json.success) {
+        setActionSuccessMsg(`KYC marked as Rejected. Notification email sent to partner with corrections required.`);
+        setIsRejectModalOpen(false);
+        setRejectionReason("");
+        await fetchMerchant();
+        setTimeout(() => setActionSuccessMsg(null), 6000);
+      } else {
+        alert(json.message || "Rejection failed");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsProcessingKyc(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirm(`Are you sure you want to delete merchant "${data?.name}" (${id})? This cannot be undone.`)) return;
@@ -783,6 +844,71 @@ export default function MerchantViewPage() {
           </div>
         )}
 
+
+        {/* Success Action Notification Banner */}
+        {actionSuccessMsg && (
+          <div className="fixed bottom-6 right-6 z-50 bg-emerald-900 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-700 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-3 max-w-md">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <p className="text-xs font-semibold">{actionSuccessMsg}</p>
+          </div>
+        )}
+
+        {/* KYC Rejection Modal with Dynamic Remarks & Email Notice */}
+        {isRejectModalOpen && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4 animate-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Reject KYC Verification</h3>
+                    <p className="text-[11px] text-slate-500">{data?.name}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsRejectModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                >
+                  <XCircle className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-700 block">
+                  Rejection Reason / Required Corrections:
+                </label>
+                <textarea
+                  rows={4}
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="e.g. GST certificate mismatch with trade name; please upload legible copy of PAN card and recent electricity bill."
+                  className="w-full text-xs p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                />
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  📧 <strong>Dynamic Email Notice:</strong> This remark will be formatted into the <em>Merchant KYC Verification Requires Attention</em> email template and automatically sent to <strong>{data?.owner_email || data?.support_email || "the merchant"}</strong> with a link to re-upload documents.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  onClick={() => setIsRejectModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectKyc}
+                  disabled={isProcessingKyc || !rejectionReason.trim()}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 rounded-xl shadow-xs"
+                >
+                  {isProcessingKyc ? "Processing..." : "Confirm Rejection & Dispatch Email"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
