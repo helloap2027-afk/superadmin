@@ -3002,27 +3002,36 @@ export default function MobileAppSimulator() {
         <nav className="absolute bottom-0 inset-x-0 bg-white border-t border-slate-200 py-2 px-4 flex items-center justify-between z-30 shadow-lg select-none">
           <button 
             onClick={() => {
-              if (mode === "vendor") {
-                setVendorView("dashboard");
-              }
+              setMode("customer");
               setActiveTab("Home");
             }}
-            className={`flex flex-col items-center gap-0.5 ${activeTab === "Home" ? "text-[#0076D7]" : "text-slate-400"}`}
+            className={`flex flex-col items-center gap-0.5 ${(activeTab === "Home" && mode === "customer") ? "text-[#0076D7]" : "text-slate-400"}`}
           >
             <Home className="w-4 h-4" />
             <span className="text-[9px] font-bold">Home</span>
           </button>
 
           <button 
-            onClick={() => setActiveTab("Services")}
-            className={`flex flex-col items-center gap-0.5 ${activeTab === "Services" ? "text-[#0076D7]" : "text-slate-400"}`}
+            onClick={() => {
+              setMode("customer");
+              setActiveTab("Services");
+            }}
+            className={`flex flex-col items-center gap-0.5 ${(activeTab === "Services" && mode === "customer") ? "text-[#0076D7]" : "text-slate-400"}`}
           >
             <Compass className="w-4 h-4" />
             <span className="text-[9px] font-medium">Services</span>
           </button>
 
           <button 
-            onClick={() => setMode(mode === "customer" ? "vendor" : "customer")}
+            onClick={() => {
+              if (mode === "customer") {
+                setMode("vendor");
+                setVendorView("dashboard");
+              } else {
+                setMode("customer");
+                setActiveTab("Home");
+              }
+            }}
             className="flex flex-col items-center -mt-5"
           >
             <div className="w-10 h-10 rounded-full bg-[#FF6B35] text-white flex items-center justify-center shadow-md ring-4 ring-white">
@@ -3032,8 +3041,11 @@ export default function MobileAppSimulator() {
           </button>
 
           <button 
-            onClick={() => setActiveTab("Enquiries")}
-            className={`flex flex-col items-center gap-0.5 ${activeTab === "Enquiries" ? "text-[#0076D7]" : "text-slate-400"}`}
+            onClick={() => {
+              setMode("customer");
+              setActiveTab("Enquiries");
+            }}
+            className={`flex flex-col items-center gap-0.5 ${(activeTab === "Enquiries" && mode === "customer") ? "text-[#0076D7]" : "text-slate-400"}`}
           >
             <MessageSquare className="w-4 h-4" />
             <span className="text-[9px] font-medium">Enquiries</span>
@@ -3041,16 +3053,13 @@ export default function MobileAppSimulator() {
 
           <button 
             onClick={() => {
-              if (mode === "vendor") {
-                setVendorView("profile");
-              } else {
-                setActiveTab("Profile");
-              }
+              setMode("vendor");
+              setVendorView("dashboard");
             }}
-            className={`flex flex-col items-center gap-0.5 ${(activeTab === "Profile" || (mode === "vendor" && vendorView === "profile")) ? "text-[#0076D7]" : "text-slate-400"}`}
+            className={`flex flex-col items-center gap-0.5 ${(mode === "vendor" && vendorView === "dashboard") ? "text-[#FF6B35] font-bold" : "text-slate-400"}`}
           >
             <User className="w-4 h-4" />
-            <span className="text-[9px] font-medium">{mode === "vendor" ? "Profile & KYC" : currentUser ? "Profile" : "Login"}</span>
+            <span className="text-[9px] font-medium">Profile & KYC</span>
           </button>
         </nav>
 
