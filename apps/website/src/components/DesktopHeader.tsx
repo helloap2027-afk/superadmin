@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { toast } from "./Toast";
 import { AP_EXPLORE_CATEGORIES } from "../data/exploreData";
+import { useToast } from "./ToastProvider";
 
 export interface DesktopHeaderProps {
   selectedCity: "Hyderabad" | "Vijayawada" | "Guntur";
@@ -47,7 +48,11 @@ export function DesktopHeader({
   onOpenFastDeals,
   onLogout,
 }: DesktopHeaderProps) {
+<<<<<<< HEAD
+  const { showToast } = useToast();
+=======
   const router = useRouter();
+>>>>>>> feature/superadmin
   const [showCityDropdown, setShowCityDropdown] = useState(false);
   const [showAccountDropdown, setShowAccountDropdown] = useState(false);
   const [sessionUser, setSessionUser] = useState<any>(null);
@@ -61,6 +66,8 @@ export function DesktopHeader({
   const [unreadNotifCount, setUnreadNotifCount] = useState<number>(0);
   const searchRef = useRef<HTMLDivElement>(null);
   const cityDropdownRef = useRef<HTMLDivElement>(null);
+<<<<<<< HEAD
+=======
   const accountDropdownRef = useRef<HTMLDivElement>(null);
 
   // Sync authenticated session user & roles
@@ -108,12 +115,21 @@ export function DesktopHeader({
       window.removeEventListener("storage", handleAuthChange);
     };
   }, [syncSession, isLoggedIn]);
+>>>>>>> feature/superadmin
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (cityDropdownRef.current && !cityDropdownRef.current.contains(event.target as Node)) {
         setShowCityDropdown(false);
       }
+<<<<<<< HEAD
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+=======
       if (accountDropdownRef.current && !accountDropdownRef.current.contains(event.target as Node)) {
         setShowAccountDropdown(false);
       }
@@ -365,6 +381,7 @@ export function DesktopHeader({
       isMounted = false;
       clearInterval(interval);
     };
+>>>>>>> feature/superadmin
   }, []);
 
   useEffect(() => {
@@ -402,6 +419,29 @@ export function DesktopHeader({
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           setGpsDetecting(false);
+<<<<<<< HEAD
+          setShowCityDropdown(false);
+          if (onDetectLiveGps) onDetectLiveGps();
+          showToast({
+            type: "location",
+            title: "GPS Location Verified",
+            message: `Connected to ${selectedCity} Hyperlocal Gateway! (${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)})`,
+            duration: 4000,
+          });
+        },
+        () => {
+          setGpsDetecting(false);
+          setShowCityDropdown(false);
+          if (onDetectLiveGps) onDetectLiveGps();
+          showToast({
+            type: "location",
+            title: "GPS Location Verified",
+            message: `Connected to ${selectedCity} Hyperlocal Gateway!`,
+            duration: 3500,
+          });
+        },
+        { timeout: 3000 }
+=======
           const { latitude, longitude } = pos.coords;
           if (latitude < 16.8 && longitude > 80.2) {
             onSelectCity("Vijayawada");
@@ -422,28 +462,48 @@ export function DesktopHeader({
           if (onDetectLiveGps) onDetectLiveGps();
         },
         { timeout: 4000 }
+>>>>>>> feature/superadmin
       );
     } else {
       setTimeout(() => {
         setGpsDetecting(false);
+<<<<<<< HEAD
+        setShowCityDropdown(false);
+        if (onDetectLiveGps) onDetectLiveGps();
+        showToast({
+          type: "location",
+          title: "GPS Location Verified",
+          message: `Connected to ${selectedCity} Hyperlocal Gateway!`,
+          duration: 3500,
+        });
+=======
         onSelectCity("Hyderabad");
         if (onSelectLocality) onSelectLocality("Hitec City");
         if (onDetectLiveGps) onDetectLiveGps();
+>>>>>>> feature/superadmin
       }, 500);
     }
   };
 
   return (
+<<<<<<< HEAD
+    <header className="bg-white sticky top-0 z-40 border-b border-slate-200/90 shadow-2xs w-full max-w-full">
+      
+      {/* 1. TOP MAIN WHITE NAVBAR (Matching Screenshot) */}
+      <div className="max-w-[1720px] mx-auto px-3 sm:px-4 lg:px-6 py-2.5 flex items-center justify-between gap-3 relative z-30">
+=======
     <header className="bg-white sticky top-0 z-[60] border-b border-slate-200/90 shadow-2xs w-full max-w-full">
       
       {/* 1. TOP MAIN WHITE NAVBAR */}
       <div className="relative z-[70] max-w-[1720px] mx-auto px-3 sm:px-4 lg:px-6 py-2.5 flex items-center justify-between gap-3">
+>>>>>>> feature/superadmin
         
         {/* Left: Brand Logo + Location Selector */}
         <div className="flex items-center gap-3">
           
           {/* Brand Logo: Hello-Hi with Pin Badge */}
-          <div 
+          <Link 
+            href="/"
             onClick={() => {
               onSelectCategory(null);
               onSearchChange("");
@@ -462,10 +522,15 @@ export function DesktopHeader({
                 Search Local. Connect Instant.
               </span>
             </div>
-          </div>
+          </Link>
 
+<<<<<<< HEAD
+          {/* City & Locality Selector Pill */}
+          <div ref={cityDropdownRef} className="relative z-50">
+=======
           {/* City & Locality Selector Pill with Auto-Detection Inside Dropdown */}
           <div ref={cityDropdownRef} className="relative z-[80]">
+>>>>>>> feature/superadmin
             <button
               onClick={() => setShowCityDropdown(!showCityDropdown)}
               className="flex items-center gap-2 bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 transition text-left"
@@ -481,6 +546,31 @@ export function DesktopHeader({
             </button>
 
             {showCityDropdown && (
+<<<<<<< HEAD
+              <div className="absolute left-0 top-full mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl py-1.5 z-[100] animate-in fade-in slide-in-from-top-1 duration-150">
+                {/* 1. Auto-detect option in the header of the location dropdown */}
+                <button
+                  onClick={handleGpsClick}
+                  className="w-full text-left px-3.5 py-2.5 bg-blue-50/70 hover:bg-blue-100 border-b border-blue-100 flex items-center justify-between transition group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Compass className={`w-4 h-4 text-[#0076D7] ${gpsDetecting ? "animate-spin" : "group-hover:rotate-45 transition-transform"}`} />
+                    <div className="flex flex-col">
+                      <span className="text-xs font-bold text-[#0076D7]">
+                        {gpsDetecting ? "Detecting location..." : "Auto-detect Location"}
+                      </span>
+                      <span className="text-[10px] text-slate-500">Using Device GPS</span>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">
+                    GPS
+                  </span>
+                </button>
+
+                <div className="px-3.5 py-1.5 text-[10px] uppercase font-bold text-slate-400 tracking-wider border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <span>Select Active Hub</span>
+                  <span className="text-emerald-500 font-bold">Live</span>
+=======
               <div className="fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:left-0 sm:top-full sm:mt-2 sm:w-72 bg-white border border-slate-200 rounded-2xl shadow-2xl py-1.5 z-[90] overflow-hidden max-h-[calc(100vh-100px)] overflow-y-auto animate-in fade-in slide-in-from-top-2">
                 {/* 1. GPS Auto-Detect Option Inside Location Dropdown */}
                 <button
@@ -512,6 +602,7 @@ export function DesktopHeader({
                 <div className="px-3.5 py-1.5 text-[9px] uppercase font-bold text-slate-400 tracking-wider bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                   <span>Or Select City Hub</span>
                   <span className="text-emerald-600 font-bold">3 Active Hubs</span>
+>>>>>>> feature/superadmin
                 </div>
 
                 {(["Hyderabad", "Vijayawada", "Guntur"] as const).map((city) => (
@@ -530,6 +621,15 @@ export function DesktopHeader({
                         : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
+<<<<<<< HEAD
+                    <div>
+                      <span className="font-bold block">{city}</span>
+                      <span className={`text-[10px] ${selectedCity === city ? "text-blue-100" : "text-slate-400"}`}>
+                        {city === "Hyderabad" ? "Hitec City, Gachibowli" : city === "Vijayawada" ? "Benz Circle, Nahamar" : "Brodipet, Arundelpet"}
+                      </span>
+                    </div>
+                    {selectedCity === city && <ShieldCheck className="w-4 h-4 shrink-0" />}
+=======
                     <div className="flex flex-col leading-tight">
                       <span className="font-bold">{city}</span>
                       <span className={`text-[10px] ${selectedCity === city ? "text-blue-100" : "text-slate-400"}`}>
@@ -537,6 +637,7 @@ export function DesktopHeader({
                       </span>
                     </div>
                     {selectedCity === city && <ShieldCheck className="w-4 h-4 shrink-0 text-white" />}
+>>>>>>> feature/superadmin
                   </button>
                 ))}
               </div>
@@ -606,7 +707,8 @@ export function DesktopHeader({
         {/* Right Nav Links & Actions */}
         <div className="flex items-center gap-2 lg:gap-3 shrink-0">
           
-          <button 
+          <Link 
+            href="/"
             onClick={() => {
               onSelectCategory(null);
               onSearchChange("");
@@ -614,13 +716,14 @@ export function DesktopHeader({
             className="text-xs font-bold text-slate-700 hover:text-[#0076D7] transition hidden xl:block"
           >
             Home
-          </button>
+          </Link>
 
-          <button 
+          <Link 
+            href="/explore"
             className="text-xs font-bold text-[#0076D7] bg-blue-50 border border-blue-200 px-3 py-1 rounded-lg transition"
           >
             Explore
-          </button>
+          </Link>
 
           <button 
             onClick={onOpenFastDeals}
@@ -631,7 +734,11 @@ export function DesktopHeader({
           </button>
 
           <button 
-            onClick={() => alert("🏬 B2B Wholesale Mart: Verified bulk industrial and IT suppliers in Hyderabad")}
+            onClick={() => showToast({
+              type: "info",
+              title: "B2B Wholesale Mart",
+              message: `Verified bulk industrial and IT suppliers in ${selectedCity}.`,
+            })}
             className="text-xs font-bold text-slate-700 hover:text-slate-900 transition hidden xl:flex items-center gap-1"
           >
             <Store className="w-3.5 h-3.5 text-slate-500" />
@@ -668,9 +775,19 @@ export function DesktopHeader({
             <span>+ Business Listing</span>
           </button>
 
+<<<<<<< HEAD
+          {/* Notification Bell with Badge */}
+          <button 
+            onClick={() => showToast({
+              type: "info",
+              title: "Instant Notification",
+              message: `1 New fast quote received in ${selectedLocality || selectedCity}!`,
+            })}
+=======
           {/* Notification Bell with Badge -> Navigates to Dynamic Notifications Page */}
           <Link 
             href="/notifications"
+>>>>>>> feature/superadmin
             className="relative p-1.5 rounded-full bg-amber-50 hover:bg-amber-100 text-amber-600 border border-amber-200 transition"
             title="View Real-Time Notifications & Leads"
           >
@@ -852,7 +969,11 @@ export function DesktopHeader({
       </div>
 
       {/* 2. CATEGORIES NAVIGATION RIBBON (Exact 14 Categories from Screenshot) */}
+<<<<<<< HEAD
+      <div className="bg-white border-t border-slate-200/90 px-2 sm:px-3 lg:px-4 py-1.5 overflow-x-hidden no-scrollbar scrollbar-none shadow-2xs relative z-10">
+=======
       <div className="relative z-10 bg-white border-t border-slate-200/90 px-2 sm:px-3 lg:px-4 py-1.5 overflow-x-hidden no-scrollbar scrollbar-none shadow-2xs">
+>>>>>>> feature/superadmin
         <div className="w-full max-w-[1720px] mx-auto flex items-center justify-between gap-1 text-[11px] xl:text-xs">
           {AP_EXPLORE_CATEGORIES.map((cat) => {
             const isSelected = selectedCategory === cat.slug;

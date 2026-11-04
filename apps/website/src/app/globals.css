@@ -10,7 +10,11 @@
 
 html, body {
   max-width: 100%;
+<<<<<<< HEAD
+  overflow-x: clip;
+=======
   overflow-x: clip !important;
+>>>>>>> feature/superadmin
   margin: 0;
   padding: 0;
   background-color: #F8FAFC;

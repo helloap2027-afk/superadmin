@@ -1,10 +1,12 @@
 {
   "name": "@hello/mobile",
   "version": "1.0.0",
+  "main": "index.js",
   "private": true,
   "description": "HELLO Mobile Application & Simulator (React Native Expo + Interactive Simulator)",
   "scripts": {
-    "dev": "next dev -p 3002",
+    "dev": "node scripts/dev.js",
+    "dev:web": "next dev -p 3002",
     "build": "next build",
     "start": "next start -p 3002",
     "expo:start": "expo start",
@@ -12,18 +14,20 @@
     "expo:ios": "expo start --ios"
   },
   "dependencies": {
+    "@expo/metro-runtime": "^58.0.16",
+    "@hello/config": "workspace:*",
+    "@hello/contracts": "workspace:*",
+    "@hello/design-tokens": "workspace:*",
+    "@hello/utils": "workspace:*",
+    "@hello/validation": "workspace:*",
+    "expo": "~52.0.0",
+    "expo-status-bar": "~2.0.0",
+    "lucide-react": "^0.453.0",
     "next": "14.2.15",
     "react": "18.3.1",
     "react-dom": "18.3.1",
-    "lucide-react": "^0.453.0",
-    "expo": "~52.0.0",
-    "expo-status-bar": "~2.0.0",
     "react-native": "0.76.2",
-    "@hello/contracts": "workspace:*",
-    "@hello/design-tokens": "workspace:*",
-    "@hello/config": "workspace:*",
-    "@hello/validation": "workspace:*",
-    "@hello/utils": "workspace:*"
+    "react-native-web": "^0.21.4"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
