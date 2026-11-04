@@ -9,6 +9,7 @@ interface EmptyStateProps {
   isSearch?: boolean;
   onClearSearch?: () => void;
   actionText?: string;
+  actionLabel?: string;
   onAction?: () => void;
 }
 
@@ -17,7 +18,7 @@ export function EmptyState({
   description,
   isSearch = false,
   onClearSearch,
-  actionText,
+  actionText, actionLabel,
   onAction,
 }: EmptyStateProps) {
   const defaultTitle = isSearch ? "No matching records found" : "No records available";
@@ -49,13 +50,13 @@ export function EmptyState({
         </button>
       )}
 
-      {!isSearch && actionText && onAction && (
+      {!isSearch && (actionText || actionLabel) && onAction && (
         <button
           type="button"
           onClick={onAction}
           className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-[#0076D7] text-white text-xs font-semibold rounded-xl hover:bg-[#0060b0] transition shadow-xs"
         >
-          {actionText}
+          {actionText || actionLabel}
         </button>
       )}
     </div>

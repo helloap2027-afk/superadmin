@@ -773,7 +773,7 @@ export function CMSModule({ currentSlug, onNavigateSlug }: CMSModuleProps) {
                 </span>
                 <button
                   type="button"
-                  onClick={() => setActiveTab("Settings")}
+                  onClick={() => setActiveTab("SEO")}
                   className="text-[11px] font-bold text-[#0076D7] hover:underline"
                 >
                   View All
