@@ -636,11 +636,51 @@ export function SubscriptionsModule() {
           }}
         />
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="space-y-3">
+          {/* Bulk Selection Action Toolbar */}
+          {selectedIds.length > 0 && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-2xl px-5 py-3 flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold text-indigo-900">
+                  {selectedIds.length} of {subscriptions.length} record(s) selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds([])}
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white rounded-xl transition"
+                >
+                  Deselect All
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={isDeleting}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-xl transition shadow-xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {isDeleting ? "Deleting..." : `Delete Selected (${selectedIds.length})`}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                  <th className="py-3.5 pl-4 pr-2 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={subscriptions.length > 0 && selectedIds.length === subscriptions.length}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 text-[#0076D7] focus:ring-blue-500 cursor-pointer"
+                      title="Select / Deselect All Records"
+                    />
+                  </th>
                   <th className="py-3.5 px-4">Subscriber</th>
                   <th className="py-3.5 px-4">Plan</th>
                   <th
@@ -668,16 +708,28 @@ export function SubscriptionsModule() {
               </thead>
 
               <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
-                {subscriptions.map((s) => (
-                  <tr
-                    key={s.id}
-                    onClick={() => setSelectedSub(s)}
-                    className="hover:bg-slate-50/70 transition cursor-pointer group"
-                  >
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-900">{s.subscriber_name}</div>
-                      <div className="text-[11px] text-slate-400">{s.subscriber_email}</div>
-                    </td>
+                {subscriptions.map((s) => {
+                  const isChecked = selectedIds.includes(s.id);
+                  return (
+                    <tr
+                      key={s.id}
+                      onClick={() => setSelectedSub(s)}
+                      className={`hover:bg-slate-50/70 transition cursor-pointer group ${
+                        isChecked ? "bg-blue-50/40" : ""
+                      }`}
+                    >
+                      <td className="py-3.5 pl-4 pr-2 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => toggleSelectOne(s.id, e as any)}
+                          className="w-4 h-4 rounded border-slate-300 text-[#0076D7] focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-slate-900">{s.subscriber_name}</div>
+                        <div className="text-[11px] text-slate-400">{s.subscriber_email}</div>
+                      </td>
 
                     <td className="py-3.5 px-4">
                       <span className="font-semibold text-slate-800">{s.plan_name}</span>
@@ -712,20 +764,34 @@ export function SubscriptionsModule() {
                     </td>
 
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedSub(s);
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-[#0076D7] hover:bg-blue-50 rounded-lg transition"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSub(s);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-[#0076D7] hover:bg-blue-50 rounded-lg transition"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmSub(s);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Delete Subscription Record"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -744,6 +810,7 @@ export function SubscriptionsModule() {
               setPage(1);
             }}
           />
+        </div>
         </div>
       )}
 
