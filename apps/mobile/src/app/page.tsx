@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   MapPin,
   Search,
@@ -26,8 +26,17 @@ import {
   Loader2,
   Clock,
   ShieldCheck,
-  Compass
+  Compass,
+  FileText,
+  Upload,
+  AlertTriangle,
+  AlertCircle,
+  Trash2,
+  ExternalLink,
+  Store,
+  Image as ImageIcon
 } from "lucide-react";
+import { toast } from "@/components/Toast";
 
 const API_BASE = "http://localhost:4000/api/v1";
 
@@ -391,16 +400,61 @@ export default function MobileAppSimulator() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
-  const [authStep, setAuthStep] = useState<"phone" | "otp">("phone");
+  // authStep: "role" = role selection, "phone" = OTP form, "otp" = verify
+  const [authStep, setAuthStep] = useState<"role" | "phone" | "otp">("role");
+  // authRole: selected account type
+  const [authRole, setAuthRole] = useState<"CUSTOMER" | "PARTNER" | null>(null);
   const [authPhone, setAuthPhone] = useState("");
   const [authName, setAuthName] = useState("");
   const [authEmail, setAuthEmail] = useState("");
   const [authLang, setAuthLang] = useState("English");
   const [authOtp, setAuthOtp] = useState("");
   const [authChallengeId, setAuthChallengeId] = useState("");
+  const [authDevOtp, setAuthDevOtp] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [showRawDbJson, setShowRawDbJson] = useState(false);
+
+  // Vendor Profile & KYC Workflow States
+  const [vendorView, setVendorView] = useState<"dashboard" | "profile">("dashboard");
+  const [vendorProfile, setVendorProfile] = useState<any>(null);
+  const [vendorCompletion, setVendorCompletion] = useState<any>(null);
+  const [vendorToastDismissed, setVendorToastDismissed] = useState(false);
+  const [vendorLoading, setVendorLoading] = useState(false);
+  const [vendorSaving, setVendorSaving] = useState(false);
+  const [vendorKycReqs, setVendorKycReqs] = useState<any>(null);
+  const [vendorActiveSection, setVendorActiveSection] = useState<string>("all");
+
+  // Form edit states
+  const [vOwnerName, setVOwnerName] = useState("");
+  const [vOwnerEmail, setVOwnerEmail] = useState("");
+  const [vOwnerLanguage, setVOwnerLanguage] = useState("English");
+  const [vOwnerIdType, setVOwnerIdType] = useState("");
+  const [vOwnerIdNumber, setVOwnerIdNumber] = useState("");
+  const [vOwnerIdFileBase64, setVOwnerIdFileBase64] = useState<string | null>(null);
+  const [vOwnerIdFileName, setVOwnerIdFileName] = useState("");
+  const [vOwnerIdFileUrl, setVOwnerIdFileUrl] = useState("");
+  const [vBizName, setVBizName] = useState("");
+  const [vBizLegalName, setVBizLegalName] = useState("");
+  const [vBizType, setVBizType] = useState("Sole Proprietor");
+  const [vBizCategory, setVBizCategory] = useState("restaurants");
+  const [vBizDescription, setVBizDescription] = useState("");
+  const [vBizPhone, setVBizPhone] = useState("");
+  const [vBizWhatsapp, setVBizWhatsapp] = useState("");
+  const [vBizLogoUrl, setVBizLogoUrl] = useState("");
+  const [vBizCoverImageUrl, setVBizCoverImageUrl] = useState("");
+  const [vBizCity, setVBizCity] = useState("Hyderabad");
+  const [vBizLocality, setVBizLocality] = useState("Hitec City");
+  const [vBizAddress, setVBizAddress] = useState("");
+  const [vBizPincode, setVBizPincode] = useState("500081");
+  const [vProofType, setVProofType] = useState("GST Registration Certificate");
+  const [vDocNumber, setVDocNumber] = useState("");
+  const [vDocNoAvailable, setVDocNoAvailable] = useState(false);
+  const [vDocFileBase64, setVDocFileBase64] = useState<string | null>(null);
+  const [vDocFileName, setVDocFileName] = useState("");
+  const [vLicenseFileBase64, setVLicenseFileBase64] = useState<string | null>(null);
+  const [vLicenseFileName, setVLicenseFileName] = useState("");
+  const [vLicenseNumber, setVLicenseNumber] = useState("");
 
   // Dynamic Categories from Database
   const [categories, setCategories] = useState<MobileCategory[]>(ALL_14_SERVICES);
@@ -428,20 +482,335 @@ export default function MobileAppSimulator() {
     loadDbCategories();
   }, []);
 
-  // Load user session on mount
+  // Load user session on mount — uses unified hello_access_token
   useEffect(() => {
-    const savedToken = typeof window !== "undefined" ? localStorage.getItem("hello_mobile_token") : null;
+    const savedToken = typeof window !== "undefined" ? localStorage.getItem("hello_access_token") : null;
     if (savedToken) {
-      fetch(`${API_BASE}/users/me`, {
+      fetch(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${savedToken}` }
       })
         .then((res) => res.json())
         .then((json) => {
-          if (json.success && json.data) setCurrentUser(json.data);
+          if (json.success && json.data) {
+            setCurrentUser(json.data);
+            // Restore active role from localStorage preference
+            const savedRole = localStorage.getItem("hello_active_role");
+            const roles: string[] = Array.isArray(json.data.roles) ? json.data.roles : [];
+            const hasMerchant = roles.includes("VENDOR_OWNER") || roles.includes("VENDOR_STAFF");
+            if (savedRole === "MERCHANT" && hasMerchant) {
+              setMode("vendor");
+            }
+          }
         })
         .catch(() => {});
     }
   }, []);
+
+  // Dynamic Notifications from Database
+  const [mobileNotifs, setMobileNotifs] = useState<any[]>([]);
+  const [mobileNotifRole, setMobileNotifRole] = useState<"customer" | "merchant">(mode === "vendor" ? "merchant" : "customer");
+  const [unreadNotifCount, setUnreadNotifCount] = useState<number>(0);
+  const [loadingNotifs, setLoadingNotifs] = useState<boolean>(false);
+
+  const fetchMobileNotifications = useCallback(async () => {
+    try {
+      setLoadingNotifs(true);
+      const res = await fetch(`${API_BASE}/notifications?role=${mobileNotifRole}&pageSize=20`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        setMobileNotifs(json.data);
+      }
+      const countRes = await fetch(`${API_BASE}/notifications/counts`);
+      const countJson = await countRes.json();
+      if (countJson.success && countJson.data) {
+        setUnreadNotifCount(countJson.data.totalUnread || 0);
+      }
+    } catch (err) {
+      console.warn("Mobile notifications fetch warning:", err);
+    } finally {
+      setLoadingNotifs(false);
+    }
+  }, [mobileNotifRole]);
+
+  useEffect(() => {
+    fetchMobileNotifications();
+  }, [fetchMobileNotifications, activeTab]);
+
+  const handleMobileMarkAsRead = async (id: string) => {
+    try {
+      await fetch(`${API_BASE}/notifications/${id}/read`, { method: "POST" });
+      setMobileNotifs((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n)));
+      setUnreadNotifCount((c) => Math.max(0, c - 1));
+    } catch {}
+  };
+
+  const getMobileAuthHeaders = (): Record<string, string> => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("hello_access_token") : null;
+    const userStr = typeof window !== "undefined" ? localStorage.getItem("hello_user") : null;
+    let uid = "";
+    if (userStr) {
+      try { uid = JSON.parse(userStr).id || ""; } catch {}
+    }
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = "Bearer " + token;
+    if (uid) headers["x-user-id"] = uid;
+    return headers;
+  };
+
+  // Vendor Profile & KYC Workflow Methods
+  const fetchVendorProfile = useCallback(async () => {
+    try {
+      setVendorLoading(true);
+      const headers = getMobileAuthHeaders();
+      const res = await fetch(`${API_BASE}/merchant/profile`, { headers });
+      const json = await res.json();
+      if (json?.success && json.data) {
+        setVendorProfile(json.data);
+        const comp = json.data.completion;
+        setVendorCompletion(comp);
+        if (json.data.user) {
+          setVOwnerName(json.data.user.fullName || "");
+          setVOwnerEmail(json.data.user.email || "");
+          setVOwnerLanguage(json.data.user.preferredLanguage || "English");
+          setVOwnerIdType(json.data.user.identityProofType || "");
+          setVOwnerIdNumber(json.data.user.identityProofNumber || "");
+          setVOwnerIdFileUrl(json.data.user.identityProofFileUrl || "");
+        }
+        if (json.data.business) {
+          const b = json.data.business;
+          setVBizName(b.name || "");
+          setVBizLegalName(b.legalName || "");
+          setVBizType(b.businessType || "Sole Proprietor");
+          setVBizCategory(b.categorySlug || "restaurants");
+          setVBizDescription(b.description || "");
+          setVBizPhone(b.primaryPhone || "");
+          setVBizWhatsapp(b.whatsappNumber || "");
+          setVBizLogoUrl(b.logoUrl || "");
+          setVBizCoverImageUrl(b.coverImageUrl || "");
+          setVBizCity(b.cityName || "Hyderabad");
+          setVBizLocality(b.localityName || "Hitec City");
+          setVBizAddress(b.addressLine1 || "");
+          setVBizPincode(b.pincode || "500081");
+        }
+        const reqRes = await fetch(`${API_BASE}/kyc/requirements?category=${json.data.business?.categorySlug || "restaurants"}`).then((r) => r.json()).catch(() => null);
+        if (reqRes?.success && reqRes.data) {
+          setVendorKycReqs(reqRes.data);
+        }
+      }
+    } catch (err) {
+      console.warn("Mobile vendor profile fetch warning:", err);
+    } finally {
+      setVendorLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (mode === "vendor") {
+      fetchVendorProfile();
+    }
+  }, [mode, fetchVendorProfile]);
+
+  const handleMobileSavePersonal = async () => {
+    if (!vOwnerName || vOwnerName.trim().length < 2) {
+      alert("Please enter full legal name (minimum 2 characters).");
+      return;
+    }
+    setVendorSaving(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("hello_access_token") : null;
+      const userStr = typeof window !== "undefined" ? localStorage.getItem("hello_user") : null;
+      let uid = "";
+      if (userStr) {
+        try { uid = JSON.parse(userStr).id || ""; } catch {}
+      }
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = "Bearer " + token;
+      if (uid) headers["x-user-id"] = uid;
+
+      const res = await fetch(`${API_BASE}/merchant/profile`, {
+        method: "PATCH",
+        headers,
+        body: JSON.stringify({
+          fullName: vOwnerName.trim(),
+          email: vOwnerEmail.trim(),
+          preferredLanguage: vOwnerLanguage,
+          identityProofType: vOwnerIdType,
+          identityProofNumber: vOwnerIdNumber.trim(),
+          identityProofDataUri: vOwnerIdFileBase64 || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert("Personal details & ID proof saved successfully!");
+        setVOwnerIdFileBase64(null);
+        setVOwnerIdFileName("");
+        fetchVendorProfile();
+      }
+    } catch {
+      alert("Failed to save personal details.");
+    } finally {
+      setVendorSaving(false);
+    }
+  };
+
+  const handleMobileSaveBusiness = async () => {
+    if (!vBizName || vBizName.trim().length < 2) {
+      alert("Business Name is required.");
+      return;
+    }
+    setVendorSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/merchant/businesses/${vendorProfile?.business?.id || "biz_primary"}`, {
+        method: "PATCH",
+        headers: getMobileAuthHeaders(),
+        body: JSON.stringify({
+          name: vBizName.trim(),
+          legalName: vBizLegalName.trim(),
+          businessType: vBizType,
+          categorySlug: vBizCategory,
+          description: vBizDescription.trim(),
+          primaryPhone: vBizPhone,
+          whatsappNumber: vBizWhatsapp,
+          logoUrl: vBizLogoUrl,
+          coverImageUrl: vBizCoverImageUrl,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert("Business profile updated!");
+        fetchVendorProfile();
+      }
+    } catch {
+      alert("Failed to save business.");
+    } finally {
+      setVendorSaving(false);
+    }
+  };
+
+  const handleMobileSaveAddress = async () => {
+    setVendorSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/merchant/businesses/${vendorProfile?.business?.id || "biz_primary"}`, {
+        method: "PATCH",
+        headers: getMobileAuthHeaders(),
+        body: JSON.stringify({
+          cityName: vBizCity,
+          localityName: vBizLocality,
+          addressLine1: vBizAddress,
+          pincode: vBizPincode,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert("Business address saved!");
+        fetchVendorProfile();
+      }
+    } catch {
+      alert("Failed to save address.");
+    } finally {
+      setVendorSaving(false);
+    }
+  };
+
+  const handleMobileUploadDoc = async (isLicense = false) => {
+    setVendorSaving(true);
+    try {
+      const body = isLicense
+        ? {
+            documentCategory: "CATEGORY_LICENSE",
+            documentType: vendorKycReqs?.categoryLicenses?.[0]?.name || "Statutory License",
+            documentNumber: vLicenseNumber,
+            fileDataUri: vLicenseFileBase64,
+            fileName: vLicenseFileName || "license.pdf",
+          }
+        : {
+            documentCategory: "BUSINESS_PROOF",
+            documentType: vProofType,
+            documentNumber: vDocNumber,
+            hasNoDocument: vDocNoAvailable,
+            fileDataUri: vDocFileBase64,
+            fileName: vDocFileName || "business_proof.pdf",
+          };
+
+      const res = await fetch(`${API_BASE}/merchant/businesses/${vendorProfile?.business?.id || "biz_primary"}/documents`, {
+        method: "POST",
+        headers: getMobileAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert(isLicense ? "Category License uploaded!" : vDocNoAvailable ? "Declaration saved!" : "Document uploaded!");
+        setVDocFileBase64(null);
+        setVDocFileName("");
+        setVLicenseFileBase64(null);
+        setVLicenseFileName("");
+        fetchVendorProfile();
+      }
+    } catch {
+      alert("Failed to upload document.");
+    } finally {
+      setVendorSaving(false);
+    }
+  };
+
+  const handleMobileSubmitKyc = async () => {
+    setVendorSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/merchant/businesses/${vendorProfile?.business?.id || "biz_primary"}/kyc/submit`, {
+        method: "POST",
+        headers: getMobileAuthHeaders(),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert("KYC Package submitted! Super Admin has been notified for verification.");
+        fetchVendorProfile();
+      }
+    } catch {
+      alert("Failed to submit KYC.");
+    } finally {
+      setVendorSaving(false);
+    }
+  };
+
+  const handleMobileDeleteDoc = async (docId: string) => {
+    if (!confirm("Are you sure you want to delete this document?")) return;
+    setVendorSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/merchant/businesses/${vendorProfile?.business?.id || "biz_primary"}/documents/${docId}`, {
+        method: "DELETE",
+        headers: getMobileAuthHeaders(),
+      });
+      const json = await res.json();
+      if (json.success) {
+        alert("Document removed.");
+        fetchVendorProfile();
+      }
+    } catch {
+      alert("Failed to delete document.");
+    } finally {
+      setVendorSaving(false);
+    }
+  };
+
+  const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>, isLicense = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size exceeds 5MB limit. Please choose a smaller document.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (isLicense) {
+        setVLicenseFileBase64(reader.result as string);
+        setVLicenseFileName(file.name);
+      } else {
+        setVDocFileBase64(reader.result as string);
+        setVDocFileName(file.name);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSendMobileOtp = async () => {
     const cleanPhone = authPhone.replace(/\D/g, "");
@@ -459,18 +828,78 @@ export default function MobileAppSimulator() {
 
     try {
       const fullPhone = `+91${cleanPhone}`;
+      const isPartner = authRole === "PARTNER";
+
+      // ─── Step A: Check User & Role Status Before Sending OTP ───────────
+      try {
+        const checkRes = await fetch(`${API_BASE}/auth/check-user`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phoneNumber: fullPhone }),
+        });
+        const checkJson = await checkRes.json();
+
+        if (checkRes.ok && checkJson.success && checkJson.data) {
+          const uStatus = checkJson.data;
+
+          if (authTab === "register") {
+            if (uStatus.exists) {
+              if (isPartner && uStatus.hasPartnerRole) {
+                toast.warning(`Already this account was registered with Business Partner role. Please switch to Sign In.`);
+                setAuthLoading(false);
+                return;
+              } else if (!isPartner && uStatus.hasCustomerRole) {
+                toast.warning(`Already this account was registered with Customer role. Please switch to Sign In.`);
+                setAuthLoading(false);
+                return;
+              }
+            }
+          } else {
+            // Login Mode
+            if (!uStatus.exists) {
+              toast.warning(`First you register the account before logging in.`);
+              setAuthTab("register");
+              setAuthError(null);
+              setAuthLoading(false);
+              return;
+            } else if (isPartner && !uStatus.hasPartnerRole) {
+              toast.warning(`This account is not registered as a Business Partner. First you register the Business Partner account.`);
+              setAuthTab("register");
+              setAuthRole("PARTNER");
+              setAuthError(null);
+              setAuthLoading(false);
+              return;
+            } else if (!isPartner && !uStatus.hasCustomerRole) {
+              toast.warning(`This account is not registered as a Customer. First you register the Customer account.`);
+              setAuthTab("register");
+              setAuthRole("CUSTOMER");
+              setAuthError(null);
+              setAuthLoading(false);
+              return;
+            }
+          }
+        }
+      } catch (checkErr) {
+        console.warn("Mobile check-user fallback:", checkErr);
+      }
+
+      // ─── Step B: Request OTP ───────────────────────────────────────────
       const res = await fetch(`${API_BASE}/auth/otp/request`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           phoneNumber: fullPhone,
-          purpose: authTab === "register" ? "REGISTRATION" : "CUSTOMER_LOGIN"
+          purpose: authTab === "register" ? "REGISTRATION" : "LOGIN",
+          role: isPartner ? "PARTNER" : "CUSTOMER"
         })
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to dispatch OTP code.");
 
       setAuthChallengeId(json.data.challengeId);
+      if (json.data.devOtp) {
+        setAuthDevOtp(json.data.devOtp);
+      }
       setAuthStep("otp");
     } catch (err: any) {
       setAuthError(err.message || "Connection error to API engine.");
@@ -503,6 +932,7 @@ export default function MobileAppSimulator() {
 
       const token = json.data.accessToken;
       if (typeof window !== "undefined") {
+        localStorage.setItem("hello_access_token", token);
         localStorage.setItem("hello_mobile_token", token);
       }
 
@@ -525,11 +955,18 @@ export default function MobileAppSimulator() {
       }
 
       // Query database for fresh user entity
-      const profileRes = await fetch(`${API_BASE}/users/me`, {
+      const profileRes = await fetch(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const profileJson = await profileRes.json();
-      const freshUser = profileJson?.data || json.data.user;
+      const freshUser = profileJson?.data?.user || json.data.user;
+
+      const isPartner = authRole === "PARTNER";
+      if (typeof window !== "undefined") {
+        localStorage.setItem("hello_user", JSON.stringify(freshUser));
+        localStorage.setItem("hello_active_role", isPartner ? "MERCHANT" : "CUSTOMER");
+        window.dispatchEvent(new Event("hello_auth_changed"));
+      }
 
       setCurrentUser(freshUser);
       setAuthModalOpen(false);
@@ -537,7 +974,13 @@ export default function MobileAppSimulator() {
       setAuthOtp("");
       setAuthPhone("");
       setAuthName("");
-      setActiveTab("Profile");
+
+      if (isPartner) {
+        setMode("vendor");
+        setActiveTab("Home");
+      } else {
+        setActiveTab("Profile");
+      }
     } catch (err: any) {
       setAuthError(err.message || "Verification failed.");
     } finally {
@@ -810,28 +1253,102 @@ export default function MobileAppSimulator() {
               ))}
             </div>
           ) : activeTab === "Notifications" ? (
-            /* ================= ALERTS TAB ================= */
+            /* ================= DYNAMIC ALERTS TAB (DB CONNECTED) ================= */
             <div className="p-4 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                <h3 className="text-sm font-black text-slate-900">Notifications & Alerts</h3>
-                <span className="text-[10px] text-slate-400">Today</span>
-              </div>
-              <div className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#FF6B35]" />
-                  <span className="text-xs font-bold text-slate-900">Special Hitec City Offer</span>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Notifications & Alerts</h3>
+                  <p className="text-[10px] text-slate-400">Direct from MySQL hello_db</p>
                 </div>
-                <p className="text-[11px] text-slate-600">Get 1+1 on Craft Cocktails at Amnesia Sky Bar this Friday!</p>
-                <span className="text-[9px] text-slate-400 block pt-1">12 mins ago</span>
+                <button
+                  onClick={() => fetchMobileNotifications()}
+                  className="text-[10px] font-bold text-[#0076D7] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200"
+                >
+                  Refresh
+                </button>
               </div>
-              <div className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-xs font-bold text-slate-900">KYC Verified Update</span>
+
+              {/* Role Switcher Pill */}
+              <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 rounded-xl">
+                <button
+                  onClick={() => setMobileNotifRole("customer")}
+                  className={`py-1.5 text-xs font-bold rounded-lg transition ${
+                    mobileNotifRole === "customer"
+                      ? "bg-white text-[#0076D7] shadow-2xs"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Customer Alerts
+                </button>
+                <button
+                  onClick={() => setMobileNotifRole("merchant")}
+                  className={`py-1.5 text-xs font-bold rounded-lg transition ${
+                    mobileNotifRole === "merchant"
+                      ? "bg-white text-[#FF6B35] shadow-2xs"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  Merchant Leads
+                </button>
+              </div>
+
+              {loadingNotifs ? (
+                <div className="py-8 text-center text-xs text-slate-400 flex items-center justify-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin text-[#0076D7]" />
+                  <span>Loading alerts from DB...</span>
                 </div>
-                <p className="text-[11px] text-slate-600">Your registered mobile number is verified with DPDP Act 2023 compliance.</p>
-                <span className="text-[9px] text-slate-400 block pt-1">2 hours ago</span>
-              </div>
+              ) : mobileNotifs.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center space-y-2">
+                  <Bell className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-bold text-slate-700">No {mobileNotifRole} notifications</p>
+                  <p className="text-[10px] text-slate-400">All caught up! New quotes and leads appear in real-time.</p>
+                </div>
+              ) : (
+                mobileNotifs.map((item) => {
+                  const isUnread = item.is_read === 0;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`bg-white rounded-2xl border p-3 shadow-2xs space-y-1.5 transition ${
+                        isUnread ? "border-blue-200 bg-blue-50/20" : "border-slate-200"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${
+                              isUnread ? "bg-[#0076D7] animate-pulse" : "bg-slate-300"
+                            }`}
+                          />
+                          <span className={`text-xs truncate ${isUnread ? "font-black text-slate-900" : "font-bold text-slate-700"}`}>
+                            {item.title}
+                          </span>
+                        </div>
+                        {isUnread && (
+                          <button
+                            onClick={() => handleMobileMarkAsRead(item.id)}
+                            className="text-[9px] text-[#0076D7] hover:underline shrink-0 font-bold"
+                          >
+                            Mark Read
+                          </button>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-slate-600 leading-relaxed">{item.message}</p>
+                      <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[9px] text-slate-400">
+                        <span className="capitalize">{item.type?.replace(/_/g, " ").toLowerCase()}</span>
+                        {item.type === "LEAD_RECEIVED" && (
+                          <a
+                            href="tel:+919848012345"
+                            className="text-emerald-600 font-bold flex items-center gap-1 bg-emerald-50 px-1.5 py-0.5 rounded"
+                          >
+                            <Phone className="w-2.5 h-2.5" /> Call Lead
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           ) : activeTab === "Profile" ? (
             /* ================= PROFILE TAB (LIVE DB IDENTITY) ================= */
@@ -917,14 +1434,14 @@ export default function MobileAppSimulator() {
 
                     <div className="flex items-center gap-2 pt-2">
                       <button
-                        onClick={() => { setAuthTab("login"); setAuthModalOpen(true); }}
+                        onClick={() => { setAuthTab("login"); setAuthStep("role"); setAuthRole(null); setAuthModalOpen(true); }}
                         className="flex-1 bg-[#0076D7] hover:bg-[#005FAE] text-white py-2.5 rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
                       >
                         <User className="w-3.5 h-3.5" />
                         <span>Login</span>
                       </button>
                       <button
-                        onClick={() => { setAuthTab("register"); setAuthModalOpen(true); }}
+                        onClick={() => { setAuthTab("register"); setAuthStep("role"); setAuthRole(null); setAuthModalOpen(true); }}
                         className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 py-2.5 rounded-xl text-xs font-bold transition border border-slate-200 flex items-center justify-center gap-1.5"
                       >
                         <span>Register</span>
@@ -949,8 +1466,8 @@ export default function MobileAppSimulator() {
             <div className="space-y-3.5">
               
               {/* Header: City Selector + GPS Detect + Bell */}
-              <div className="px-4 pt-2 flex items-center justify-between relative">
-                <div className="relative">
+              <div className="px-4 pt-2 flex items-center justify-between relative z-30">
+                <div className="relative z-50">
                   <button
                     onClick={() => setShowCityDropdown(!showCityDropdown)}
                     className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-full transition text-left"
@@ -963,9 +1480,22 @@ export default function MobileAppSimulator() {
 
                   {/* City Dropdown Menu */}
                   {showCityDropdown && (
-                    <div className="absolute left-0 top-full mt-2 w-52 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50">
+                    <div className="absolute left-0 top-full mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-1 z-50">
+                      {/* GPS Auto-Detect in Mobile Dropdown */}
+                      <button
+                        onClick={() => {
+                          setSelectedCity("Hyderabad");
+                          setSelectedLocality("Hitec City");
+                          setShowCityDropdown(false);
+                        }}
+                        className="w-full text-left px-3 py-2 bg-blue-50 hover:bg-blue-100 text-[#0076D7] text-xs font-bold border-b border-slate-100 flex items-center gap-2 transition"
+                      >
+                        <Compass className="w-3.5 h-3.5 text-[#0076D7]" />
+                        <span>Auto-Detect Location (GPS)</span>
+                      </button>
+
                       <div className="px-3 py-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">
-                        Select City Hub
+                        Or Select City Hub
                       </div>
                       {(["Hyderabad", "Vijayawada", "Guntur"] as const).map((city) => (
                         <button
@@ -1003,7 +1533,7 @@ export default function MobileAppSimulator() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => { setAuthTab("login"); setAuthModalOpen(true); }}
+                      onClick={() => { setAuthTab("login"); setAuthStep("role"); setAuthRole(null); setAuthModalOpen(true); }}
                       className="bg-[#0076D7] hover:bg-[#005FAE] text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs transition hover:shadow-md"
                       title="Login or Register"
                     >
@@ -1015,11 +1545,14 @@ export default function MobileAppSimulator() {
                   <div 
                     onClick={() => setActiveTab("Notifications")}
                     className="relative p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 transition cursor-pointer"
+                    title="View Dynamic Alerts"
                   >
                     <Bell className="w-4 h-4 text-slate-700" />
-                    <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">
-                      1
-                    </span>
+                    {unreadNotifCount > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-3.5 px-0.5 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                        {unreadNotifCount > 9 ? "9+" : unreadNotifCount}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1258,24 +1791,85 @@ export default function MobileAppSimulator() {
               </div>
 
             </div>
-          ) : (
-            /* ================= VENDOR MODE VIEW ================= */
-            <div className="space-y-4 p-4">
+          ) : vendorView === "dashboard" ? (
+            /* ================= VENDOR DASHBOARD VIEW ================= */
+            <div className="space-y-4 p-4 pb-16">
               
               {/* Vendor Workspace Header */}
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[10px] font-bold uppercase text-[#FF6B35] tracking-wider">Vendor Workspace</span>
-                  <h3 className="text-base font-black text-slate-900">SparkleSmart Solutions</h3>
-                  <p className="text-[10px] text-slate-500">Hitec City, Hyderabad</p>
+                  <h3 className="text-base font-black text-slate-900">
+                    {vendorProfile?.business?.name || "SparkleSmart Solutions"}
+                  </h3>
+                  <p className="text-[10px] text-slate-500">
+                    {vendorProfile?.business?.localityName || "Hitec City"}, {vendorProfile?.business?.cityName || "Hyderabad"}
+                  </p>
                 </div>
                 <button
                   onClick={() => setMode("customer")}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-2.5 py-1.5 rounded-full border border-slate-300"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-2.5 py-1.5 rounded-full border border-slate-300 transition"
                 >
                   Exit to Customer
                 </button>
               </div>
+
+              {/* 1. DASHBOARD PROFILE COMPLETION TOAST / REMINDER CARD */}
+              {!vendorToastDismissed && (vendorCompletion?.showReminder || (vendorCompletion?.percentage !== undefined && vendorCompletion.percentage < 100)) && (
+                <div className="relative bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 text-white p-4 rounded-2xl shadow-lg border border-orange-400/40 animate-in fade-in slide-in-from-top-3">
+                  <button
+                    onClick={() => setVendorToastDismissed(true)}
+                    className="absolute top-2.5 right-2.5 text-white/80 hover:text-white p-1 rounded-full hover:bg-black/10 transition"
+                    title="Dismiss reminder"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center shrink-0">
+                      <Sparkles className="w-5 h-5 text-white" />
+                    </div>
+                    <div className="space-y-1 pr-4">
+                      <h4 className="text-xs font-black tracking-tight leading-snug">
+                        Complete Your Merchant Profile
+                      </h4>
+                      <p className="text-[11px] text-white/90 leading-tight">
+                        Add your personal details, business information, and verification documents to complete your profile and build customer trust.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress Bar & Stat */}
+                  <div className="mt-3 pt-2.5 border-t border-white/20 flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-bold">
+                      <span>Profile Strength</span>
+                      <span>{vendorCompletion?.percentage ?? 35}% Completed</span>
+                    </div>
+                    <div className="w-full bg-black/20 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="bg-white h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.max(10, vendorCompletion?.percentage ?? 35)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={() => setVendorView("profile")}
+                      className="flex-1 bg-white hover:bg-orange-50 text-[#FF6B35] px-3 py-2 rounded-xl text-xs font-black shadow-xs transition flex items-center justify-center gap-1.5"
+                    >
+                      <span>Update Profile</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setVendorToastDismissed(true)}
+                      className="bg-black/20 hover:bg-black/30 text-white px-3 py-2 rounded-xl text-xs font-bold transition"
+                    >
+                      Later
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Live Metric Cards (2x2 Grid) */}
               <div className="grid grid-cols-2 gap-2.5">
@@ -1305,26 +1899,40 @@ export default function MobileAppSimulator() {
               <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2 shadow-2xs">
                 <h4 className="text-xs font-bold text-slate-900 mb-2">Business Management</h4>
                 
-                <div className="flex items-center justify-between py-1.5 border-b border-slate-100 cursor-pointer">
+                <div 
+                  onClick={() => setVendorView("profile")}
+                  className="flex items-center justify-between py-2 border-b border-slate-100 cursor-pointer hover:bg-slate-50 -mx-1 px-1 rounded-lg transition"
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-[#FF6B35]" />
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 block">Merchant Profile & KYC</span>
+                      <span className="text-[10px] text-slate-400">Personal, Business, Address, Licenses</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold bg-orange-100 text-[#FF6B35] px-2 py-0.5 rounded-full flex items-center gap-1">
+                    {vendorCompletion?.percentage ?? 35}% →
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between py-2 border-b border-slate-100 cursor-pointer hover:bg-slate-50 -mx-1 px-1 rounded-lg transition">
                   <div className="flex items-center gap-2">
                     <MessageSquare className="w-4 h-4 text-[#0076D7]" />
-                    <span className="text-xs font-semibold text-slate-700">Enquiry Inbox (32 Leads)</span>
+                    <div>
+                      <span className="text-xs font-semibold text-slate-700 block">Enquiry Inbox (32 Leads)</span>
+                      <span className="text-[10px] text-slate-400">Customer quote requests</span>
+                    </div>
                   </div>
                   <span className="text-xs font-bold text-[#0076D7]">View →</span>
                 </div>
 
-                <div className="flex items-center justify-between py-1.5 border-b border-slate-100 cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-emerald-600" />
-                    <span className="text-xs font-semibold text-slate-700">Edit Business Profile & Media</span>
-                  </div>
-                  <span className="text-xs text-slate-400">→</span>
-                </div>
-
-                <div className="flex items-center justify-between py-1.5 cursor-pointer">
+                <div className="flex items-center justify-between py-2 cursor-pointer hover:bg-slate-50 -mx-1 px-1 rounded-lg transition">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-purple-600" />
-                    <span className="text-xs font-semibold text-slate-700">Staff Members (4 Active)</span>
+                    <div>
+                      <span className="text-xs font-semibold text-slate-700 block">Staff Members (4 Active)</span>
+                      <span className="text-[10px] text-slate-400">Manage operator permissions</span>
+                    </div>
                   </div>
                   <span className="text-xs text-slate-400">→</span>
                 </div>
@@ -1333,20 +1941,1057 @@ export default function MobileAppSimulator() {
               {/* Business Status Card */}
               <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2 shadow-2xs text-xs">
                 <div className="flex items-center justify-between text-slate-600">
-                  <span>Verification Badge:</span>
-                  <span className="text-emerald-600 font-bold flex items-center gap-1">
-                    <CheckCircle className="w-3.5 h-3.5" /> Approved & Verified
-                  </span>
+                  <span>Verification Status:</span>
+                  {vendorProfile?.business?.isVerified ? (
+                    <span className="text-emerald-600 font-bold flex items-center gap-1">
+                      <CheckCircle className="w-3.5 h-3.5" /> Approved & Verified
+                    </span>
+                  ) : vendorProfile?.business?.status === "PENDING" ? (
+                    <span className="text-sky-600 font-bold flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" /> KYC Under Review
+                    </span>
+                  ) : vendorProfile?.business?.status === "REJECTED" ? (
+                    <span className="text-red-600 font-bold flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> Action Required
+                    </span>
+                  ) : (
+                    <span className="text-amber-600 font-bold flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" /> Pending KYC Submission
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center justify-between text-slate-600">
                   <span>Today's Hours:</span>
-                  <span className="font-semibold text-slate-800">24/7 Emergency Service</span>
+                  <span className="font-semibold text-slate-800">09:00 AM - 09:00 PM</span>
                 </div>
                 <div className="flex items-center justify-between text-slate-600">
                   <span>Subscription:</span>
                   <span className="text-[#0076D7] font-bold">Hello Super Plus Tier</span>
                 </div>
               </div>
+
+            </div>
+          ) : (
+            /* ================= VENDOR PROFILE & KYC VIEW (7 SECTIONS) ================= */
+            <div className="space-y-4 p-4 pb-20">
+              
+              {/* Profile Top Navigation Header */}
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setVendorView("dashboard")}
+                  className="flex items-center gap-1.5 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-full border border-slate-300 shadow-2xs transition"
+                >
+                  <span>← Back to Dashboard</span>
+                </button>
+                <button
+                  onClick={() => fetchVendorProfile()}
+                  disabled={vendorLoading}
+                  className="text-[10px] font-bold text-[#0076D7] bg-blue-50 px-2.5 py-1 rounded-full border border-blue-200 transition"
+                >
+                  {vendorLoading ? "Refreshing..." : "↻ Refresh"}
+                </button>
+              </div>
+
+              {/* 1. PROFILE OVERVIEW & VERIFICATION BADGE */}
+              <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-[#FF6B35] tracking-wider">Merchant Profile & KYC</span>
+                    <h3 className="text-base font-black text-slate-900">
+                      {vBizName || vendorProfile?.business?.name || "Merchant Business"}
+                    </h3>
+                  </div>
+                  <div>
+                    {vendorProfile?.business?.isVerified ? (
+                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> VERIFIED
+                      </span>
+                    ) : vendorProfile?.business?.status === "PENDING" ? (
+                      <span className="bg-sky-100 text-sky-800 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> UNDER REVIEW
+                      </span>
+                    ) : vendorProfile?.business?.status === "REJECTED" ? (
+                      <span className="bg-red-100 text-red-800 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> REJECTED
+                      </span>
+                    ) : (
+                      <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" /> NOT SUBMITTED
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                    <span>Overall Completion</span>
+                    <span className="text-[#FF6B35]">{vendorCompletion?.percentage ?? 35}%</span>
+                  </div>
+                  <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-[#FF6B35] to-amber-500 h-full rounded-full transition-all duration-500"
+                      style={{ width: `${Math.max(10, vendorCompletion?.percentage ?? 35)}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Rejection / Resubmission Notice if remarks present */}
+                {vendorProfile?.business?.adminRemarks && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs space-y-1">
+                    <div className="font-bold text-red-800 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                      <span>Super Admin Feedback:</span>
+                    </div>
+                    <p className="text-red-700 text-[11px] leading-tight">
+                      {vendorProfile.business.adminRemarks}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Section Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none py-1">
+                {[
+                  { id: "all", label: "All" },
+                  { id: "personal", label: "1. Personal" },
+                  { id: "business", label: "2. Business" },
+                  { id: "address", label: "3. Address" },
+                  { id: "proof", label: "4. Proof" },
+                  { id: "licenses", label: "5. Licenses" },
+                  { id: "dossier", label: "6. Dossier" },
+                ].map((sec) => (
+                  <button
+                    key={sec.id}
+                    onClick={() => setVendorActiveSection(sec.id)}
+                    className={`px-3 py-1 rounded-full text-[10px] font-bold whitespace-nowrap transition ${
+                      vendorActiveSection === sec.id
+                        ? "bg-[#0076D7] text-white shadow-2xs"
+                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    {sec.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* 2. PERSONAL DETAILS SECTION */}
+              {(vendorActiveSection === "all" || vendorActiveSection === "personal") && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-[#0076D7]" />
+                      <span>1. Personal Information</span>
+                    </h4>
+                    <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      Step 1
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Full Name (Authorized Signatory) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={vOwnerName}
+                        onChange={(e) => setVOwnerName(e.target.value)}
+                        placeholder="e.g. Ramesh Kumar"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Registered Mobile Number (OTP Verified)
+                      </label>
+                      <input
+                        type="text"
+                        value={vendorProfile?.user?.phoneNumber || "+91 98480 12345"}
+                        disabled
+                        className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-500 cursor-not-allowed font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        value={vOwnerEmail}
+                        onChange={(e) => setVOwnerEmail(e.target.value)}
+                        placeholder="merchant@example.com"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Preferred Communication Language
+                      </label>
+                      <select
+                        value={vOwnerLanguage}
+                        onChange={(e) => setVOwnerLanguage(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      >
+                        <option value="English">English</option>
+                        <option value="Telugu">Telugu (తెలుగు)</option>
+                        <option value="Hindi">Hindi (हिन्दी)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Identity Proof (Voluntary)
+                      </label>
+                      <select
+                        value={vOwnerIdType}
+                        onChange={(e) => {
+                          setVOwnerIdType(e.target.value);
+                          if (!e.target.value) {
+                            setVOwnerIdFileBase64(null);
+                            setVOwnerIdFileName("");
+                          }
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      >
+                        <option value="">Select ID Type (Optional)</option>
+                        <option value="Aadhaar Card">Aadhaar Card</option>
+                        <option value="PAN Card">PAN Card</option>
+                        <option value="Passport">Passport</option>
+                        <option value="Driving License">Driving License</option>
+                        <option value="Voter ID">Voter ID</option>
+                      </select>
+                    </div>
+
+                    {/* DYNAMIC UPLOAD FIELD: Appears when Voluntary ID is chosen */}
+                    {vOwnerIdType && (
+                      <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-slate-800">
+                            Upload {vOwnerIdType}
+                          </span>
+                          {vOwnerIdFileUrl && (
+                            <a
+                              href={vOwnerIdFileUrl.startsWith("http") ? vOwnerIdFileUrl : `http://localhost:4000${vOwnerIdFileUrl}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[10px] font-bold text-[#0076D7] hover:underline flex items-center gap-0.5"
+                            >
+                              View Current Doc <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          )}
+                        </div>
+
+                        {/* Current Document Live Preview */}
+                        {(vOwnerIdFileBase64 || vOwnerIdFileUrl) && (
+                          <div className="space-y-1">
+                            <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-wide">
+                              {vOwnerIdType} Preview
+                            </span>
+                            <div className="w-full h-28 rounded-xl bg-white border border-blue-100 overflow-hidden flex items-center justify-center p-1.5 shadow-2xs relative">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={
+                                  vOwnerIdFileBase64 ||
+                                  (vOwnerIdFileUrl?.startsWith("http") ? vOwnerIdFileUrl : `http://localhost:4000${vOwnerIdFileUrl}`)
+                                }
+                                alt="ID Proof Preview"
+                                className="w-full h-full object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = "none";
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">
+                            {vOwnerIdType} Number (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            value={vOwnerIdNumber}
+                            onChange={(e) => setVOwnerIdNumber(e.target.value)}
+                            placeholder={`Enter ${vOwnerIdType} Number`}
+                            className="w-full bg-white border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:border-[#0076D7]"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-bold text-slate-600 mb-0.5">
+                            Upload Document File (PDF / Image)
+                          </label>
+                          <div className="relative border border-dashed border-blue-300 rounded-xl p-2 text-center bg-white cursor-pointer hover:border-[#0076D7] transition">
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                if (file.size > 5 * 1024 * 1024) {
+                                  alert("File exceeds 5MB limit. Please upload a smaller file.");
+                                  return;
+                                }
+                                const reader = new FileReader();
+                                reader.onloadend = () => {
+                                  setVOwnerIdFileBase64(reader.result as string);
+                                  setVOwnerIdFileName(file.name);
+                                };
+                                reader.readAsDataURL(file);
+                              }}
+                              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                            />
+                            <span className="text-[11px] text-slate-600 truncate block">
+                              {vOwnerIdFileName ? vOwnerIdFileName : vOwnerIdFileUrl ? "Change Document File" : `Choose ${vOwnerIdType} File`}
+                            </span>
+                          </div>
+                          {vOwnerIdFileBase64 && (
+                            <button
+                              type="button"
+                              onClick={() => { setVOwnerIdFileBase64(null); setVOwnerIdFileName(""); }}
+                              className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold mt-1 flex items-center gap-1"
+                            >
+                              <X className="w-3 h-3" /> Remove selected document
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={handleMobileSavePersonal}
+                      disabled={vendorSaving}
+                      className="w-full bg-[#0076D7] hover:bg-[#005FAE] text-white py-2 rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
+                    >
+                      {vendorSaving ? "Saving..." : "Save Personal Details"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 3. BUSINESS DETAILS SECTION */}
+              {(vendorActiveSection === "all" || vendorActiveSection === "business") && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4 text-[#FF6B35]" />
+                      <span>2. Business Details</span>
+                    </h4>
+                    <span className="text-[9px] font-bold text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+                      Step 2
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Business / Shop Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={vBizName}
+                        onChange={(e) => setVBizName(e.target.value)}
+                        placeholder="e.g. SparkleSmart Solutions"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Legal Business Name (As on Certificate)
+                      </label>
+                      <input
+                        type="text"
+                        value={vBizLegalName}
+                        onChange={(e) => setVBizLegalName(e.target.value)}
+                        placeholder="e.g. SparkleSmart Solutions Private Limited"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Business Type
+                      </label>
+                      <select
+                        value={vBizType}
+                        onChange={(e) => setVBizType(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      >
+                        <option value="Sole Proprietor">Sole Proprietor</option>
+                        <option value="Partnership">Partnership</option>
+                        <option value="Private Limited Company">Private Limited Company</option>
+                        <option value="Limited Liability Partnership (LLP)">Limited Liability Partnership (LLP)</option>
+                        <option value="Public Limited Company">Public Limited Company</option>
+                        <option value="Trust / Society / NGO">Trust / Society / NGO</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Primary Business Category
+                      </label>
+                      <select
+                        value={vBizCategory}
+                        onChange={(e) => setVBizCategory(e.target.value)}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      >
+                        {categories.map((c) => (
+                          <option key={c.slug} value={c.slug}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Description / Services Offered
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={vBizDescription}
+                        onChange={(e) => setVBizDescription(e.target.value)}
+                        placeholder="Describe your products, specialty, or services..."
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 mb-1">
+                          Primary Phone
+                        </label>
+                        <input
+                          type="tel"
+                          value={vBizPhone}
+                          onChange={(e) => setVBizPhone(e.target.value)}
+                          placeholder="Phone"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 mb-1">
+                          WhatsApp
+                        </label>
+                        <input
+                          type="tel"
+                          value={vBizWhatsapp}
+                          onChange={(e) => setVBizWhatsapp(e.target.value)}
+                          placeholder="WhatsApp"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Business Logo & Cover Banner Upload with Live Previews */}
+                    <div className="border-t border-slate-100 pt-3 space-y-3">
+                      <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-[#FF6B35]" />
+                        Business Logo &amp; Cover Banner
+                      </span>
+
+                      {/* LOGO */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                          LOGO <span className="text-slate-400 font-normal normal-case">(Square · max 2MB)</span>
+                        </label>
+                        <label className="border-2 border-dashed border-slate-300 hover:border-[#FF6B35] rounded-xl p-2.5 flex flex-col items-center justify-center cursor-pointer bg-slate-50 transition text-center relative overflow-hidden">
+                          {vBizLogoUrl ? (
+                            <div className="flex flex-col items-center justify-center w-full space-y-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={vBizLogoUrl.startsWith("http") || vBizLogoUrl.startsWith("data:") ? vBizLogoUrl : `http://localhost:4000${vBizLogoUrl}`}
+                                alt="Business logo"
+                                className="max-h-24 object-contain rounded-lg border border-slate-200 shadow-2xs"
+                              />
+                              <span className="text-[9px] text-[#0076D7] font-bold">Tap to change logo</span>
+                            </div>
+                          ) : (
+                            <>
+                              <Camera className="w-5 h-5 text-slate-400 mb-0.5" />
+                              <span className="text-[11px] font-bold text-slate-700">Upload Logo</span>
+                              <span className="text-[9px] text-slate-400">PNG, JPG (Square)</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 2 * 1024 * 1024) {
+                                alert("Logo image exceeds 2MB limit.");
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setVBizLogoUrl(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        {vBizLogoUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setVBizLogoUrl("")}
+                            className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Remove logo
+                          </button>
+                        )}
+                      </div>
+
+                      {/* COVER BANNER */}
+                      <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold text-slate-600 uppercase tracking-wide">
+                          COVER BANNER <span className="text-slate-400 font-normal normal-case">(16:9 · max 5MB)</span>
+                        </label>
+                        <label className="border-2 border-dashed border-slate-300 hover:border-[#FF6B35] rounded-xl p-2.5 flex flex-col items-center justify-center cursor-pointer bg-slate-50 transition text-center relative overflow-hidden">
+                          {vBizCoverImageUrl ? (
+                            <div className="flex flex-col items-center justify-center w-full space-y-1">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={vBizCoverImageUrl.startsWith("http") || vBizCoverImageUrl.startsWith("data:") ? vBizCoverImageUrl : `http://localhost:4000${vBizCoverImageUrl}`}
+                                alt="Business cover banner"
+                                className="max-h-24 w-full object-cover rounded-lg border border-slate-200 shadow-2xs"
+                              />
+                              <span className="text-[9px] text-[#0076D7] font-bold">Tap to change banner</span>
+                            </div>
+                          ) : (
+                            <>
+                              <ImageIcon className="w-5 h-5 text-slate-400 mb-0.5" />
+                              <span className="text-[11px] font-bold text-slate-700">Upload Cover Banner</span>
+                              <span className="text-[9px] text-slate-400">PNG, JPG, WebP (16:9)</span>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/jpg,image/webp"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 5 * 1024 * 1024) {
+                                alert("Cover banner image exceeds 5MB limit.");
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onloadend = () => {
+                                setVBizCoverImageUrl(reader.result as string);
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                            className="hidden"
+                          />
+                        </label>
+                        {vBizCoverImageUrl && (
+                          <button
+                            type="button"
+                            onClick={() => setVBizCoverImageUrl("")}
+                            className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1"
+                          >
+                            <X className="w-3 h-3" /> Remove banner
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleMobileSaveBusiness}
+                      disabled={vendorSaving}
+                      className="w-full bg-[#FF6B35] hover:bg-[#E5531E] text-white py-2 rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
+                    >
+                      {vendorSaving ? "Saving..." : "Save Business Details"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 4. BUSINESS ADDRESS SECTION */}
+              {(vendorActiveSection === "all" || vendorActiveSection === "address") && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <MapPin className="w-4 h-4 text-emerald-600" />
+                      <span>3. Business Address</span>
+                    </h4>
+                    <span className="text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      Step 3
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Door / Building / Street Address
+                      </label>
+                      <input
+                        type="text"
+                        value={vBizAddress}
+                        onChange={(e) => setVBizAddress(e.target.value)}
+                        placeholder="Plot 42, Silicon Valley Avenue"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 mb-1">City Hub</label>
+                        <select
+                          value={vBizCity}
+                          onChange={(e) => setVBizCity(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none"
+                        >
+                          <option value="Hyderabad">Hyderabad</option>
+                          <option value="Vijayawada">Vijayawada</option>
+                          <option value="Guntur">Guntur</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold text-slate-700 mb-1">Locality</label>
+                        <input
+                          type="text"
+                          value={vBizLocality}
+                          onChange={(e) => setVBizLocality(e.target.value)}
+                          placeholder="Hitec City"
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-2 text-xs text-slate-900 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        PIN Code
+                      </label>
+                      <input
+                        type="text"
+                        value={vBizPincode}
+                        onChange={(e) => setVBizPincode(e.target.value)}
+                        placeholder="500081"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+                      />
+                    </div>
+
+                    <button
+                      onClick={handleMobileSaveAddress}
+                      disabled={vendorSaving}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
+                    >
+                      {vendorSaving ? "Saving..." : "Save Address"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 5. BUSINESS REGISTRATION PROOF SECTION */}
+              {(vendorActiveSection === "all" || vendorActiveSection === "proof") && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-purple-600" />
+                      <span>4. Business Registration Proof</span>
+                    </h4>
+                    <span className="text-[9px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                      Step 4
+                    </span>
+                  </div>
+
+                  {/* Show already uploaded current document preview if available */}
+                  {(() => {
+                    const currentDoc = vendorProfile?.business?.documents?.find(
+                      (d: any) => d.documentCategory === "BUSINESS_PROOF" || (!d.documentCategory && !d.documentType?.includes("License"))
+                    );
+                    if (!currentDoc) return null;
+                    const previewUrl = currentDoc.fileUrl
+                      ? currentDoc.fileUrl.startsWith("http")
+                        ? currentDoc.fileUrl
+                        : `${API_BASE.replace('/api/v1', '')}${currentDoc.fileUrl}`
+                      : null;
+                    return (
+                      <div className="p-3 bg-purple-50/60 border border-purple-200 rounded-xl space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-purple-900 flex items-center gap-1">
+                            <CheckCircle className="w-3.5 h-3.5 text-purple-600" />
+                            Current Uploaded Proof
+                          </span>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase ${
+                            currentDoc.status === "VERIFIED"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-sky-100 text-sky-800"
+                          }`}>
+                            {currentDoc.status}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-700">
+                          <span className="font-bold">{currentDoc.documentType}</span>
+                          {currentDoc.documentNumber && (
+                            <span className="font-mono text-slate-500 block text-[10px]">
+                              ID: {currentDoc.documentNumber}
+                            </span>
+                          )}
+                        </div>
+                        {previewUrl && (
+                          <div className="w-full h-32 rounded-xl bg-white border border-purple-100 overflow-hidden flex items-center justify-center p-1.5 shadow-2xs">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={previewUrl}
+                              alt="Current proof preview"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <div className="space-y-2.5 text-xs">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Select Registration Proof Type
+                      </label>
+                      <select
+                        value={vProofType}
+                        onChange={(e) => {
+                          setVProofType(e.target.value);
+                          if (e.target.value === "I Don't Have a Business Registration Document") {
+                            setVDocNoAvailable(true);
+                          } else {
+                            setVDocNoAvailable(false);
+                          }
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none focus:border-[#0076D7]"
+                      >
+                        <option value="GST Registration Certificate">GST Registration Certificate (GSTIN)</option>
+                        <option value="Udyam / MSME Registration Certificate">Udyam / MSME Registration Certificate</option>
+                        <option value="Shop & Establishment Registration Certificate">Shop & Establishment Certificate</option>
+                        <option value="Municipal Trade License">Municipal Trade License</option>
+                        <option value="Certificate of Incorporation">Certificate of Incorporation (ROC)</option>
+                        <option value="Partnership Deed">Partnership Deed</option>
+                        <option value="Other Government Proof">Other Government Proof</option>
+                        <option value="I Don't Have a Business Registration Document">I Don't Have a Business Registration Document</option>
+                      </select>
+                    </div>
+
+                    {vDocNoAvailable ? (
+                      <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 space-y-1">
+                        <span className="font-bold flex items-center gap-1 text-blue-800">
+                          <CheckCircle className="w-3.5 h-3.5 text-[#0076D7]" />
+                          Unregistered Sole Proprietor Declaration
+                        </span>
+                        <p className="text-[10px] text-blue-700 leading-tight">
+                          You can list and operate without a formal commercial document. Verification will be done using your personal identity proof and physical shop location.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Document Number / ID
+                          </label>
+                          <input
+                            type="text"
+                            value={vDocNumber}
+                            onChange={(e) => setVDocNumber(e.target.value)}
+                            placeholder="e.g. 36AAACG1234F1Z5 or UDYAM-TS-02-12345"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Upload Certificate (PDF, PNG, JPG - max 5MB)
+                          </label>
+                          <label className="border-2 border-dashed border-slate-300 hover:border-[#0076D7] rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer bg-slate-50 transition text-center relative overflow-hidden">
+                            {vDocFileBase64 ? (
+                              <div className="flex flex-col items-center justify-center w-full space-y-1.5">
+                                {vDocFileBase64.startsWith("data:image/") ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={vDocFileBase64}
+                                    alt="Registration document preview"
+                                    className="max-h-28 object-contain rounded-lg border border-slate-200"
+                                  />
+                                ) : (
+                                  <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg text-purple-900 font-bold text-xs">
+                                    <FileText className="w-4 h-4 text-purple-600" />
+                                    <span>{vDocFileName || "Document selected"}</span>
+                                  </div>
+                                )}
+                                <span className="text-[10px] font-bold text-slate-700">{vDocFileName}</span>
+                                <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.2 rounded-full">Ready to upload</span>
+                              </div>
+                            ) : (
+                              <>
+                                <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                                <span className="text-[11px] font-bold text-slate-700">Tap to browse file</span>
+                                <span className="text-[9px] text-slate-400">PDF, PNG, or JPG</span>
+                              </>
+                            )}
+                            <input
+                              type="file"
+                              accept=".pdf,.png,.jpg,.jpeg"
+                              onChange={(e) => handleDocFileSelect(e, false)}
+                              className="hidden"
+                            />
+                          </label>
+                          {vDocFileBase64 && (
+                            <button
+                              type="button"
+                              onClick={() => { setVDocFileBase64(null); setVDocFileName(""); }}
+                              className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold mt-1 flex items-center gap-1"
+                            >
+                              <X className="w-3 h-3" /> Remove selected document
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    <button
+                      onClick={() => handleMobileUploadDoc(false)}
+                      disabled={vendorSaving}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
+                    >
+                      {vendorSaving ? "Saving..." : vDocNoAvailable ? "Save Declaration" : "Upload Document"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 6. CATEGORY-SPECIFIC ADDITIONAL LICENSES */}
+              {(vendorActiveSection === "all" || vendorActiveSection === "licenses") && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <FileText className="w-4 h-4 text-amber-600" />
+                      <span>5. Category-Specific Additional Licenses</span>
+                    </h4>
+                    <span className="text-[9px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
+                      Step 5
+                    </span>
+                  </div>
+
+                  {/* Show already uploaded category license preview if available */}
+                  {(() => {
+                    const currentLic = vendorProfile?.business?.documents?.find(
+                      (d: any) => d.documentCategory === "CATEGORY_LICENSE" || d.documentType?.includes("License")
+                    );
+                    if (!currentLic) return null;
+                    const previewUrl = currentLic.fileUrl
+                      ? currentLic.fileUrl.startsWith("http")
+                        ? currentLic.fileUrl
+                        : `${API_BASE.replace('/api/v1', '')}${currentLic.fileUrl}`
+                      : null;
+                    return (
+                      <div className="p-3 bg-amber-50/60 border border-amber-200 rounded-xl space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[11px] font-bold text-amber-900 flex items-center gap-1">
+                            <CheckCircle className="w-3.5 h-3.5 text-amber-600" />
+                            Current Uploaded Statutory License
+                          </span>
+                          <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase ${
+                            currentLic.status === "VERIFIED"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-sky-100 text-sky-800"
+                          }`}>
+                            {currentLic.status}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-700">
+                          <span className="font-bold">{currentLic.documentType}</span>
+                          {currentLic.documentNumber && (
+                            <span className="font-mono text-slate-500 block text-[10px]">
+                              License: {currentLic.documentNumber}
+                            </span>
+                          )}
+                        </div>
+                        {previewUrl && (
+                          <div className="w-full h-32 rounded-xl bg-white border border-amber-100 overflow-hidden flex items-center justify-center p-1.5 shadow-2xs">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={previewUrl}
+                              alt="Current license preview"
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  <div className="space-y-2.5 text-xs">
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[11px]">
+                      <span className="font-bold">Statutory Requirement: </span>
+                      {vBizCategory === "restaurants" || vBizCategory.includes("food")
+                        ? "FSSAI 14-digit registration or state license is required for food safety."
+                        : vBizCategory.includes("pharmacy") || vBizCategory.includes("chem")
+                        ? "Form 20/21 retail drug license from State Drug Controller is required."
+                        : vBizCategory.includes("doctor") || vBizCategory.includes("hospital")
+                        ? "Medical Council / Clinical Establishment license is required."
+                        : "Trade or professional contractor license recommended for customer trust."}
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        License Number
+                      </label>
+                      <input
+                        type="text"
+                        value={vLicenseNumber}
+                        onChange={(e) => setVLicenseNumber(e.target.value)}
+                        placeholder="e.g. 13621014000123"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-900 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Upload License Document
+                      </label>
+                      <label className="border-2 border-dashed border-slate-300 hover:border-amber-500 rounded-xl p-3 flex flex-col items-center justify-center cursor-pointer bg-slate-50 transition text-center relative overflow-hidden">
+                        {vLicenseFileBase64 ? (
+                          <div className="flex flex-col items-center justify-center w-full space-y-1.5">
+                            {vLicenseFileBase64.startsWith("data:image/") ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={vLicenseFileBase64}
+                                alt="License document preview"
+                                className="max-h-28 object-contain rounded-lg border border-slate-200"
+                              />
+                            ) : (
+                              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 font-bold text-xs">
+                                <FileText className="w-4 h-4 text-amber-600" />
+                                <span>{vLicenseFileName || "License file selected"}</span>
+                              </div>
+                            )}
+                            <span className="text-[10px] font-bold text-slate-700">{vLicenseFileName}</span>
+                            <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.2 rounded-full">Ready to upload</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="w-5 h-5 text-slate-400 mb-1" />
+                            <span className="text-[11px] font-bold text-slate-700">Tap to browse license</span>
+                            <span className="text-[9px] text-slate-400">PDF, PNG, or JPG</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={(e) => handleDocFileSelect(e, true)}
+                          className="hidden"
+                        />
+                      </label>
+                      {vLicenseFileBase64 && (
+                        <button
+                          type="button"
+                          onClick={() => { setVLicenseFileBase64(null); setVLicenseFileName(""); }}
+                          className="text-[10px] text-rose-500 hover:text-rose-700 font-semibold mt-1 flex items-center gap-1"
+                        >
+                          <X className="w-3 h-3" /> Remove selected license
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => handleMobileUploadDoc(true)}
+                      disabled={vendorSaving}
+                      className="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
+                    >
+                      {vendorSaving ? "Uploading..." : "Upload Category License"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 7. UPLOADED DOCUMENTS DOSSIER & SUBMISSION */}
+              {(vendorActiveSection === "all" || vendorActiveSection === "dossier") && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-2xs space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                    <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                      <Clock className="w-4 h-4 text-emerald-600" />
+                      <span>6. KYC Dossier & Verification Submission</span>
+                    </h4>
+                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      Final Step
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <span className="text-[11px] font-bold text-slate-700 block">
+                      Uploaded Verification Documents ({vendorProfile?.business?.documents?.length || 0}):
+                    </span>
+
+                    {vendorProfile?.business?.documents && vendorProfile.business.documents.length > 0 ? (
+                      <div className="space-y-2">
+                        {vendorProfile.business.documents.map((doc: any) => (
+                          <div
+                            key={doc.id}
+                            className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-800 truncate block text-xs">
+                                  {doc.documentType}
+                                </span>
+                                <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded-full uppercase ${
+                                  doc.status === "VERIFIED"
+                                    ? "bg-emerald-100 text-emerald-800"
+                                    : doc.status === "REJECTED"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-sky-100 text-sky-800"
+                                }`}>
+                                  {doc.status}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-mono block">
+                                {doc.documentNumber ? `ID: ${doc.documentNumber}` : "Self-declared sole proprietor"}
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleMobileDeleteDoc(doc.id)}
+                              className="text-slate-400 hover:text-red-500 p-1"
+                              title="Delete Document"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-slate-50 border border-dashed border-slate-200 rounded-xl text-center text-slate-400 text-xs">
+                        No documents uploaded yet. Upload your proof and licenses above.
+                      </div>
+                    )}
+
+                    {/* Submit KYC Dossier CTA Button */}
+                    <div className="pt-2">
+                      <button
+                        onClick={handleMobileSubmitKyc}
+                        disabled={vendorSaving}
+                        className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white py-3 rounded-xl text-xs font-black shadow-md transition flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>{vendorSaving ? "Submitting Dossier..." : "Submit KYC Package for Super Admin Approval"}</span>
+                      </button>
+                      <p className="text-[10px] text-slate-400 text-center mt-1.5">
+                        Once submitted, your verification status changes to Under Review and the Super Admin team inspects your business within 24 hours.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
           )}
@@ -1356,7 +3001,12 @@ export default function MobileAppSimulator() {
         {/* Mobile Bottom Navigation Bar (5 Icons: Home, Services, Add/Switch, Alerts, Profile) */}
         <nav className="absolute bottom-0 inset-x-0 bg-white border-t border-slate-200 py-2 px-4 flex items-center justify-between z-30 shadow-lg select-none">
           <button 
-            onClick={() => setActiveTab("Home")}
+            onClick={() => {
+              if (mode === "vendor") {
+                setVendorView("dashboard");
+              }
+              setActiveTab("Home");
+            }}
             className={`flex flex-col items-center gap-0.5 ${activeTab === "Home" ? "text-[#0076D7]" : "text-slate-400"}`}
           >
             <Home className="w-4 h-4" />
@@ -1390,11 +3040,17 @@ export default function MobileAppSimulator() {
           </button>
 
           <button 
-            onClick={() => setActiveTab("Profile")}
-            className={`flex flex-col items-center gap-0.5 ${activeTab === "Profile" ? "text-[#0076D7]" : "text-slate-400"}`}
+            onClick={() => {
+              if (mode === "vendor") {
+                setVendorView("profile");
+              } else {
+                setActiveTab("Profile");
+              }
+            }}
+            className={`flex flex-col items-center gap-0.5 ${(activeTab === "Profile" || (mode === "vendor" && vendorView === "profile")) ? "text-[#0076D7]" : "text-slate-400"}`}
           >
             <User className="w-4 h-4" />
-            <span className="text-[9px] font-medium">{currentUser ? "Profile" : "Login"}</span>
+            <span className="text-[9px] font-medium">{mode === "vendor" ? "Profile & KYC" : currentUser ? "Profile" : "Login"}</span>
           </button>
         </nav>
 
@@ -1468,18 +3124,28 @@ export default function MobileAppSimulator() {
         {/* In-App Authentication & Registration Modal */}
         {authModalOpen && (
           <div className="absolute inset-0 bg-black/70 z-50 flex flex-col justify-end">
-            <div className="bg-white rounded-t-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200">
+            <div className="bg-white rounded-t-3xl p-5 space-y-4 animate-in slide-in-from-bottom duration-200 max-h-[90vh] overflow-y-auto">
+              {/* Header */}
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-black text-slate-900">
-                    {authTab === "register" ? "Create Customer Account" : "Sign In to HELLO"}
+                    {authStep === "role"
+                      ? authTab === "register"
+                        ? "How would you like to join HELLO?"
+                        : "How would you like to sign in?"
+                      : `${authRole === "PARTNER" ? "Business Partner" : "Customer"} ${
+                          authTab === "register" ? "Registration" : "Sign In"
+                        }`}
                   </h4>
-                  <p className="text-[10px] text-slate-500">Connected directly to backend SQLite database</p>
+                  <p className="text-[10px] text-slate-500">
+                    Your HELLO account is protected with secure mobile verification.
+                  </p>
                 </div>
                 <button
                   onClick={() => {
                     setAuthModalOpen(false);
-                    setAuthStep("phone");
+                    setAuthStep("role");
+                    setAuthRole(null);
                     setAuthError(null);
                   }}
                   className="p-1 rounded-full text-slate-400 hover:text-slate-700"
@@ -1488,27 +3154,31 @@ export default function MobileAppSimulator() {
                 </button>
               </div>
 
-              {/* Dual Toggle Pill */}
-              {authStep === "phone" && (
-                <div className="flex items-center p-1 bg-slate-100 rounded-xl">
-                  <button
-                    onClick={() => { setAuthTab("login"); setAuthError(null); }}
-                    className={`flex-1 py-1.5 text-center text-xs font-bold rounded-lg transition ${
-                      authTab === "login" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-500"
-                    }`}
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={() => { setAuthTab("register"); setAuthError(null); }}
-                    className={`flex-1 py-1.5 text-center text-xs font-bold rounded-lg transition ${
-                      authTab === "register" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-500"
-                    }`}
-                  >
-                    Register Account
-                  </button>
-                </div>
-              )}
+              {/* Dual Toggle Pill (Sign In / Register Account) */}
+              <div className="flex items-center p-1 bg-slate-100 rounded-xl">
+                <button
+                  onClick={() => {
+                    setAuthTab("login");
+                    setAuthError(null);
+                  }}
+                  className={`flex-1 py-1.5 text-center text-xs font-bold rounded-lg transition ${
+                    authTab === "login" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-500"
+                  }`}
+                >
+                  Sign In
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthTab("register");
+                    setAuthError(null);
+                  }}
+                  className={`flex-1 py-1.5 text-center text-xs font-bold rounded-lg transition ${
+                    authTab === "register" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-500"
+                  }`}
+                >
+                  Register Account
+                </button>
+              </div>
 
               {authError && (
                 <div className="p-2.5 rounded-xl bg-red-50 text-red-700 text-[11px] border border-red-200">
@@ -1516,12 +3186,102 @@ export default function MobileAppSimulator() {
                 </div>
               )}
 
-              {authStep === "phone" ? (
+              {/* ─── STEP 1: ROLE SELECTION (CUSTOMER VS PARTNER) ─── */}
+              {authStep === "role" && (
                 <div className="space-y-3">
+                  <p className="text-[11px] text-slate-600 font-semibold">
+                    {authTab === "register"
+                      ? "Select how you would like to join HELLO:"
+                      : "Choose your account experience to continue:"}
+                  </p>
+
+                  {/* Customer Card */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthRole("CUSTOMER");
+                      setAuthStep("phone");
+                      setAuthError(null);
+                    }}
+                    className="w-full text-left p-3.5 rounded-2xl border-2 border-slate-200 hover:border-[#0076D7] bg-white hover:bg-blue-50/40 transition flex items-start gap-3 shadow-2xs group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0076D7] flex items-center justify-center shrink-0 group-hover:bg-[#0076D7] group-hover:text-white transition">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-xs font-black text-slate-900">Customer</h5>
+                        <span className="text-[10px] font-bold text-[#0076D7]">
+                          {authTab === "register" ? "Join as Customer →" : "Continue →"}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                        Discover nearby businesses, services, and offers.
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Business Partner Card */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAuthRole("PARTNER");
+                      setAuthStep("phone");
+                      setAuthError(null);
+                    }}
+                    className="w-full text-left p-3.5 rounded-2xl border-2 border-slate-200 hover:border-[#FF6B35] bg-white hover:bg-orange-50/40 transition flex items-start gap-3 shadow-2xs group"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#FF6B35] flex items-center justify-center shrink-0 group-hover:bg-[#FF6B35] group-hover:text-white transition">
+                      <Store className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h5 className="text-xs font-black text-slate-900">Business Partner</h5>
+                        <span className="text-[10px] font-bold text-[#FF6B35]">
+                          {authTab === "register" ? "Join as Partner →" : "Continue →"}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-tight mt-0.5">
+                        List your business, manage enquiries, and connect with customers.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              {/* ─── STEP 2: PHONE & PROFILE FORM ─── */}
+              {authStep === "phone" && (
+                <div className="space-y-3">
+                  {/* Account Type Header & Change button */}
+                  <div className="flex items-center justify-between bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+                    <div className="flex items-center gap-1.5">
+                      {authRole === "PARTNER" ? (
+                        <Store className="w-3.5 h-3.5 text-[#FF6B35]" />
+                      ) : (
+                        <User className="w-3.5 h-3.5 text-[#0076D7]" />
+                      )}
+                      <span className={`text-[11px] font-bold ${authRole === "PARTNER" ? "text-[#FF6B35]" : "text-[#0076D7]"}`}>
+                        {authRole === "PARTNER" ? "Business Partner" : "Customer"} {authTab === "register" ? "Registration" : "Sign In"}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAuthStep("role");
+                        setAuthError(null);
+                      }}
+                      className="text-[10px] text-slate-500 hover:text-slate-800 underline font-semibold"
+                    >
+                      Change Account Type
+                    </button>
+                  </div>
+
                   {authTab === "register" && (
                     <>
                       <div>
-                        <label className="text-[10px] font-bold text-slate-700 block mb-1">Full Name *</label>
+                        <label className="text-[10px] font-bold text-slate-700 block mb-1">
+                          {authRole === "PARTNER" ? "Partner / Owner Full Name *" : "Full Name *"}
+                        </label>
                         <input
                           type="text"
                           placeholder="e.g. Ramesh Kumar"
@@ -1540,26 +3300,6 @@ export default function MobileAppSimulator() {
                           onChange={(e) => setAuthEmail(e.target.value)}
                           className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-[#0076D7]"
                         />
-                      </div>
-
-                      <div>
-                        <label className="text-[10px] font-bold text-slate-700 block mb-1">Language</label>
-                        <div className="flex gap-2">
-                          {["English", "Telugu", "Hindi"].map((lang) => (
-                            <button
-                              key={lang}
-                              type="button"
-                              onClick={() => setAuthLang(lang)}
-                              className={`px-3 py-1 rounded-lg text-[10px] font-bold border transition ${
-                                authLang === lang
-                                  ? "bg-[#0076D7] text-white border-[#0076D7]"
-                                  : "bg-slate-50 text-slate-600 border-slate-200"
-                              }`}
-                            >
-                              {lang}
-                            </button>
-                          ))}
-                        </div>
                       </div>
                     </>
                   )}
@@ -1599,12 +3339,24 @@ export default function MobileAppSimulator() {
                   <button
                     onClick={handleSendMobileOtp}
                     disabled={authLoading || authPhone.length < 10}
-                    className="w-full bg-[#0070E0] hover:bg-[#005bb5] disabled:bg-slate-300 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
+                    className={`w-full ${
+                      authRole === "PARTNER"
+                        ? "bg-[#FF6B35] hover:bg-[#E5531E]"
+                        : "bg-[#0070E0] hover:bg-[#005bb5]"
+                    } disabled:bg-slate-300 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs`}
                   >
                     {authLoading ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <span>{authTab === "register" ? "Register with OTP" : "Login with OTP"}</span>
+                      <span>
+                        {authRole === "PARTNER"
+                          ? authTab === "register"
+                            ? "Register as Partner with OTP"
+                            : "Partner Login with OTP"
+                          : authTab === "register"
+                          ? "Register as Customer with OTP"
+                          : "Customer Login with OTP"}
+                      </span>
                     )}
                   </button>
 
@@ -1616,29 +3368,14 @@ export default function MobileAppSimulator() {
                     </span>
                   </div>
 
-                  {/* Google Button */}
+                  {/* Google Button — Disabled */}
                   <button
                     type="button"
-                    onClick={() => {
-                      const mockUser = {
-                        id: "usr_google_" + Date.now(),
-                        fullName: authName || "Verified Google Member",
-                        email: authEmail || "google.member@gmail.com",
-                        phoneNumber: "+91 98480 12345",
-                        status: "ACTIVE",
-                        preferredLanguage: authLang,
-                        roles: ["CUSTOMER"]
-                      };
-                      if (typeof window !== "undefined") {
-                        localStorage.setItem("hello_mobile_token", "jwt_google_mobile_" + Date.now());
-                      }
-                      setCurrentUser(mockUser);
-                      setAuthModalOpen(false);
-                      setActiveTab("Profile");
-                    }}
-                    className="w-full bg-white hover:bg-slate-50 border border-slate-300 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-slate-700 shadow-2xs transition"
+                    disabled
+                    title="Google Sign-In is coming soon. Please use Mobile OTP."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 flex items-center justify-center gap-2 text-xs font-semibold text-slate-400 cursor-not-allowed opacity-75 shadow-2xs"
                   >
-                    <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24">
+                    <svg className="w-3.5 h-3.5 shrink-0 grayscale opacity-60" viewBox="0 0 24 24">
                       <path
                         fill="#4285F4"
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -1656,14 +3393,22 @@ export default function MobileAppSimulator() {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                       />
                     </svg>
-                    <span>Google</span>
+                    <span>Google (Coming Soon)</span>
                   </button>
                 </div>
-              ) : (
+              )}
+
+              {/* ─── STEP 3: OTP VERIFICATION ─── */}
+              {authStep === "otp" && (
                 <div className="space-y-3">
-                  <p className="text-[11px] text-slate-500">
-                    Enter the 6-digit code dispatched to <span className="font-bold text-slate-800">+91 {authPhone}</span>
-                  </p>
+                  <div className="bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl text-center">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider block ${authRole === "PARTNER" ? "text-[#FF6B35]" : "text-[#0076D7]"}`}>
+                      {authRole === "PARTNER" ? "Business Partner" : "Customer"} Verification
+                    </span>
+                    <p className="text-[11px] text-slate-600 mt-0.5">
+                      Enter the 6-digit code dispatched to <span className="font-bold text-slate-800">+91 {authPhone}</span>
+                    </p>
+                  </div>
 
                   <input
                     type="text"
@@ -1680,15 +3425,26 @@ export default function MobileAppSimulator() {
                     disabled={authLoading || authOtp.length !== 6}
                     className="w-full bg-[#16A34A] hover:bg-[#15803D] disabled:bg-slate-300 text-white py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
                   >
-                    {authLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Verify OTP & Save to Database</span>}
+                    {authLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <span>Verify OTP &amp; Continue</span>}
                   </button>
 
-                  <button
-                    onClick={() => setAuthStep("phone")}
-                    className="w-full text-center text-[10px] text-slate-400 hover:text-slate-600 font-semibold"
-                  >
-                    Change Phone Number
-                  </button>
+                  <div className="flex items-center justify-between text-[10px] pt-1">
+                    <button
+                      onClick={() => setAuthStep("phone")}
+                      className="text-slate-500 hover:text-slate-800 font-semibold underline"
+                    >
+                      Change Phone Number
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAuthStep("role");
+                        setAuthRole(null);
+                      }}
+                      className="text-slate-500 hover:text-slate-800 font-semibold underline"
+                    >
+                      Change Account Type
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Megaphone,
+  Ticket,
   Building2,
   LayoutGrid,
   Users,
@@ -54,6 +56,9 @@ export function AdminSidebar({
   // Expandable parent states
   const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
   const [isCmsExpanded, setIsCmsExpanded] = useState(true);
+  const [isAdsExpanded, setIsAdsExpanded] = useState(true);
+  const [isPaymentsExpanded, setIsPaymentsExpanded] = useState(true);
+  const [isUsersExpanded, setIsUsersExpanded] = useState(true);
   const [isReportsExpanded, setIsReportsExpanded] = useState(false);
   const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
 
@@ -65,6 +70,12 @@ export function AdminSidebar({
       router.push(path);
     } else if (tabName === "Dashboard") {
       router.push("/");
+    } else if (tabName === "Notifications") {
+      router.push("/notifications");
+    } else if (tabName === "Payments") {
+      router.push("/payments");
+    } else if (tabName === "Subscriptions") {
+      router.push("/subscriptions");
     }
     onCloseMobile();
   };
@@ -203,31 +214,55 @@ export function AdminSidebar({
           )}
         </div>
 
-        {/* 4. Users */}
-        <button
-          type="button"
-          onClick={() => handleNavClick("Users")}
-          className={navItemClass(isCurrentActive("Users"))}
-          title={isCollapsed ? "Users" : undefined}
-        >
-          <div className="flex items-center gap-3">
-            <Users className="w-[19px] h-[19px] shrink-0" />
-            {!isCollapsed && <span>Users</span>}
-          </div>
-        </button>
-
-        {/* 5. Merchants */}
-        <button
-          type="button"
-          onClick={() => handleNavClick("Merchants")}
-          className={navItemClass(isCurrentActive("Merchants"))}
-          title={isCollapsed ? "Merchants" : undefined}
-        >
-          <div className="flex items-center gap-3">
-            <Store className="w-[19px] h-[19px] shrink-0" />
-            {!isCollapsed && <span>Merchants</span>}
-          </div>
-        </button>
+        {/* 4. Users (Expandable with Customers & Merchants Subtitles) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              if (isCollapsed) onToggleCollapse();
+              setIsUsersExpanded(!isUsersExpanded);
+              handleNavClick("Users", "/users/customers");
+            }}
+            className={navItemClass(isCurrentActive("Users") || pathname?.startsWith("/users"))}
+            title={isCollapsed ? "Users" : undefined}
+          >
+            <div className="flex items-center gap-3">
+              <Users className="w-[19px] h-[19px] shrink-0" />
+              {!isCollapsed && <span>Users</span>}
+            </div>
+            {!isCollapsed && (
+              <ChevronDown
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
+                  isUsersExpanded ? "rotate-180" : ""
+                }`}
+              />
+            )}
+          </button>
+          {!isCollapsed && isUsersExpanded && (
+            <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
+              <div
+                onClick={() => handleNavClick("Users", "/users/customers")}
+                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${
+                  pathname === "/users/customers"
+                    ? "text-white font-semibold bg-white/15"
+                    : "text-white/75 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                Customers
+              </div>
+              <div
+                onClick={() => handleNavClick("Users", "/users/merchants")}
+                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${
+                  pathname === "/users/merchants"
+                    ? "text-white font-semibold bg-white/15"
+                    : "text-white/75 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                Merchants
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* 6. Suppliers */}
         <button
@@ -268,18 +303,53 @@ export function AdminSidebar({
           </div>
         </button>
 
-        {/* 9. Payments */}
-        <button
-          type="button"
-          onClick={() => handleNavClick("Payments")}
-          className={navItemClass(isCurrentActive("Payments"))}
-          title={isCollapsed ? "Payments" : undefined}
-        >
-          <div className="flex items-center gap-3">
-            <CreditCard className="w-[19px] h-[19px] shrink-0" />
-            {!isCollapsed && <span>Payments</span>}
-          </div>
-        </button>
+        {/* 9. Payments (Expandable Subtitles) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              if (isCollapsed) onToggleCollapse();
+              setIsPaymentsExpanded(!isPaymentsExpanded);
+              handleNavClick("Payments", "/payments");
+            }}
+            className={navItemClass(isCurrentActive("Payments"))}
+            title={isCollapsed ? "Payments" : undefined}
+          >
+            <div className="flex items-center gap-3">
+              <CreditCard className="w-[19px] h-[19px] shrink-0" />
+              {!isCollapsed && <span>Payments</span>}
+            </div>
+            {!isCollapsed && (
+              <ChevronDown
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
+                  isPaymentsExpanded ? "rotate-180" : ""
+                }`}
+              />
+            )}
+          </button>
+          {!isCollapsed && isPaymentsExpanded && (
+            <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
+              <div
+                onClick={() => handleNavClick("Payments", "/payments/wallet-transactions")}
+                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${pathname === "/payments/wallet-transactions" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
+              >
+                Wallet Transactions
+              </div>
+              <div
+                onClick={() => handleNavClick("Payments", "/payments/withdrawals")}
+                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${pathname === "/payments/withdrawals" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
+              >
+                Withdrawals
+              </div>
+              <div
+                onClick={() => handleNavClick("Payments", "/payments/plans-purchased")}
+                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${pathname === "/payments/plans-purchased" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
+              >
+                Plans Purchased
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* 10. Subscriptions */}
         <button
@@ -345,10 +415,70 @@ export function AdminSidebar({
           )}
         </div>
 
+        {/* 11b. Advertisement Management (Expandable) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              if (isCollapsed) onToggleCollapse();
+              setIsAdsExpanded(!isAdsExpanded);
+            }}
+            className={navItemClass(
+              activeTab === "Advertisement Management" || pathname?.startsWith("/advertisements")
+            )}
+            title={isCollapsed ? "Advertisement Management" : undefined}
+          >
+            <div className="flex items-center gap-3">
+              <Megaphone className="w-[19px] h-[19px] shrink-0 text-[#FF6B35]" />
+              {!isCollapsed && <span>Advertisement</span>}
+            </div>
+            {!isCollapsed && (
+              <ChevronDown
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
+                  isAdsExpanded ? "rotate-180" : ""
+                }`}
+              />
+            )}
+          </button>
+
+          {!isCollapsed && isAdsExpanded && (
+            <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
+              {[
+                { title: "Overview", path: "/advertisements/overview" },
+                { title: "Campaign Push", path: "/advertisements/campaigns" },
+                { title: "Normal Push", path: "/advertisements/normal-push" },
+                { title: "Coupons Management", path: "/advertisements/coupons" },
+                { title: "In-App Notifications", path: "/advertisements/in-app" },
+                { title: "Campaign Reports", path: "/advertisements/reports" },
+              ].map((sub) => {
+                const isSubActive = pathname === sub.path;
+                return (
+                  <button
+                    key={sub.path}
+                    type="button"
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab("Advertisement Management");
+                      router.push(sub.path);
+                      onCloseMobile();
+                    }}
+                    className={`w-full text-left py-1.5 px-2.5 rounded-md transition-colors block truncate ${
+                      isSubActive
+                        ? "text-white font-semibold bg-white/15"
+                        : "text-white/75 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {sub.title}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* 12. Notifications */}
         <button
           type="button"
-          onClick={() => handleNavClick("Notifications")}
+          onClick={() => handleNavClick("Notifications", "/notifications")}
           className={navItemClass(isCurrentActive("Notifications"))}
           title={isCollapsed ? "Notifications" : undefined}
         >
