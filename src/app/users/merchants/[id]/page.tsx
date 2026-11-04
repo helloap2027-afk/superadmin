@@ -160,6 +160,32 @@ export default function MerchantViewPage() {
     }
   };
 
+  const handleSendKycReminder = async () => {
+    if (!data) return;
+    const recipientInfo = data.owner_email || data.support_email || "the partner";
+    if (!confirm(`Send an official KYC verification reminder email to "${data.name}" (${recipientInfo})?`)) {
+      return;
+    }
+    try {
+      setIsProcessingKyc(true);
+      const res = await fetch(`${API_BASE}/admin/businesses/${id}/kyc-reminder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setActionSuccessMsg(json.message || "KYC Reminder email dispatched successfully!");
+        setTimeout(() => setActionSuccessMsg(null), 6000);
+      } else {
+        alert(json.message || "Failed to send reminder");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsProcessingKyc(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!confirm(`Are you sure you want to delete merchant "${data?.name}" (${id})? This cannot be undone.`)) return;
     try {
@@ -206,7 +232,45 @@ export default function MerchantViewPage() {
           </Link>
 
           {data && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* 1. KYC Reminder Button */}
+              <button
+                onClick={handleSendKycReminder}
+                disabled={isProcessingKyc}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 disabled:opacity-50 rounded-xl transition-colors border border-indigo-200 shadow-2xs"
+                title="Send official KYC verification reminder email to merchant partner"
+              >
+                <Mail className="w-3.5 h-3.5 text-indigo-600" />
+                {isProcessingKyc ? "Sending..." : "Send KYC Reminder"}
+              </button>
+
+              {/* 2. Approve KYC Button */}
+              {data.is_verified !== 1 ? (
+                <button
+                  onClick={handleApproveKyc}
+                  disabled={isProcessingKyc}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 rounded-xl transition-colors shadow-2xs"
+                  title="Approve KYC and send confirmation email to business partner"
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  {isProcessingKyc ? "Processing..." : "Approve KYC"}
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> KYC Verified
+                </span>
+              )}
+
+              {/* 3. Reject KYC Button */}
+              <button
+                onClick={() => setIsRejectModalOpen(true)}
+                disabled={isProcessingKyc}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-amber-700 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 rounded-xl transition-colors border border-amber-200"
+                title="Reject KYC with remarks and send notification email"
+              >
+                <XCircle className="w-3.5 h-3.5 text-amber-600" /> Reject KYC
+              </button>
+
               <Link
                 href={`/users/merchants/${id}/edit`}
                 className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors shadow-2xs"

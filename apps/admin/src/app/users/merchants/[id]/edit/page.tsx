@@ -8,7 +8,8 @@ import {
   ArrowLeft, 
   RefreshCw, 
   AlertCircle, 
-  Save, 
+  Save,
+  Mail, 
   CheckCircle2,
   User,
   MapPin,
@@ -34,6 +35,32 @@ export default function MerchantEditPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [sendingReminder, setSendingReminder] = useState(false);
+
+  const handleSendKycReminder = async () => {
+    const recipient = form.ownerEmail || "the merchant";
+    if (!confirm(`Send an official KYC verification reminder email to "${form.businessName}" (${recipient})?`)) {
+      return;
+    }
+    try {
+      setSendingReminder(true);
+      const res = await fetch(`${API_BASE}/admin/businesses/${id}/kyc-reminder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setSuccessMsg(json.message || "KYC Reminder email sent successfully!");
+        setTimeout(() => setSuccessMsg(null), 6000);
+      } else {
+        alert(json.message || "Failed to send reminder");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setSendingReminder(false);
+    }
+  };
 
   // Lookups
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
