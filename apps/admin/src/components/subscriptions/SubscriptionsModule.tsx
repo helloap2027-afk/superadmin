@@ -10,6 +10,8 @@ import {
   Search,
   Filter,
   Eye,
+  Trash2,
+  CheckSquare,
   X,
   RefreshCw,
   ArrowUpDown,
@@ -85,6 +87,79 @@ export function SubscriptionsModule() {
 
   // Detail Modal
   const [selectedSub, setSelectedSub] = useState<SubscriptionItem | null>(null);
+
+  // Multi-select and Delete state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmSub, setDeleteConfirmSub] = useState<SubscriptionItem | null>(null);
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === subscriptions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(subscriptions.map((s) => s.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSingle = async () => {
+    if (!deleteConfirmSub) return;
+    try {
+      setIsDeleting(true);
+      const res = await fetch(`http://localhost:4000/api/v1/admin/subscriptions/${deleteConfirmSub.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || "Subscription record deleted successfully!");
+        setDeleteConfirmSub(null);
+        setSelectedIds((prev) => prev.filter((id) => id !== deleteConfirmSub.id));
+        await fetchSubscriptions();
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Delete failed");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected subscription record(s)? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      setIsDeleting(true);
+      const res = await fetch("http://localhost:4000/api/v1/admin/subscriptions/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || `${selectedIds.length} subscription records deleted!`);
+        setSelectedIds([]);
+        await fetchSubscriptions();
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Bulk delete failed");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const activeRequestId = useRef(0);
 
