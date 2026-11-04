@@ -68,52 +68,77 @@ export function DesktopBizCard({
     `${biz.name}, ${biz.location.localityName}, ${biz.location.cityName}`
   )}`;
 
-  const hasImage = Boolean(biz.coverImageUrl);
-  const isAmnesia = biz.slug?.includes("amnesia") || biz.name?.toLowerCase().includes("amnesia");
-  const isSparkle = biz.slug?.includes("sparklesmart") || biz.name?.toLowerCase().includes("sparklesmart");
+  const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
+    restaurants: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
+    "restaurants-food": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
+    hotels: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop&q=80",
+    "beauty-spa": "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80",
+    "home-decor": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&auto=format&fit=crop&q=80",
+    "ask-astro": "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=80",
+    "wedding-planning": "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&auto=format&fit=crop&q=80",
+    education: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80",
+    "education-coaching": "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80",
+    "rent-hire": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&auto=format&fit=crop&q=80",
+    hospitals: "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=800&auto=format&fit=crop&q=80",
+    "doctors-clinics": "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=800&auto=format&fit=crop&q=80",
+    contractors: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&auto=format&fit=crop&q=80",
+    "pet-shops": "https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=800&auto=format&fit=crop&q=80",
+    "pg-hostels": "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&auto=format&fit=crop&q=80",
+    "estate-agent": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+    "real-estate": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+    dentists: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&auto=format&fit=crop&q=80",
+    "dental-care": "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&auto=format&fit=crop&q=80",
+  };
+
+  const displayImage =
+    biz.coverImageUrl?.trim() ||
+    CATEGORY_DEFAULT_IMAGES[biz.primaryCategory?.slug || ""] ||
+    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80";
+
+  const isAmnesia = Boolean(biz.slug?.includes("amnesia"));
+  const isSparkle = Boolean(biz.slug?.includes("sparkle"));
+  const hasImage = Boolean(displayImage);
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200/90 overflow-hidden shadow-2xs hover:shadow-md transition duration-200 flex flex-col justify-between group">
       
       <div>
-        {/* Card Top Image if available or for Amnesia */}
-        {(hasImage || isAmnesia) && (
-          <div 
-            onClick={() => onViewDetail && onViewDetail(biz)}
-            className="relative h-44 w-full bg-slate-900 overflow-hidden cursor-pointer"
-          >
-            <img
-              src={biz.coverImageUrl || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80"}
-              alt={biz.name}
-              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+        {/* Card Top Image - Always shown in Categories List */}
+        <div 
+          onClick={() => onViewDetail && onViewDetail(biz)}
+          className="relative h-44 w-full bg-slate-900 overflow-hidden cursor-pointer"
+        >
+          <img
+            src={displayImage}
+            alt={biz.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
 
-            {/* Badges on Image */}
-            <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
-              <div className="flex flex-col gap-1.5 items-start">
-                <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-xs flex items-center gap-1">
-                  ✓ Hellow Verified
+          {/* Badges on Image */}
+          <div className="absolute top-2.5 left-2.5 right-2.5 flex items-center justify-between">
+            <div className="flex flex-col gap-1.5 items-start">
+              <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-xs flex items-center gap-1">
+                ✓ HELLO Verified
+              </span>
+              {biz.dealOffer && (
+                <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow-xs">
+                  {biz.dealOffer}
                 </span>
-                {(biz.dealOffer || isAmnesia) && (
-                  <span className="bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-bold px-2.5 py-0.5 rounded shadow-xs">
-                    {biz.dealOffer || "1+1 on Craft Cocktails & Sunset Lake Seating"}
-                  </span>
-                )}
-              </div>
-
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite(biz.id);
-                }}
-                className="w-7 h-7 rounded-full bg-white/80 hover:bg-white text-slate-700 flex items-center justify-center transition shadow"
-              >
-                <Heart className={`w-3.5 h-3.5 ${isFavorite ? "fill-red-500 text-red-500" : "text-slate-600"}`} />
-              </button>
+              )}
             </div>
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleFavorite(biz.id);
+              }}
+              className="w-7 h-7 rounded-full bg-white/80 hover:bg-white text-slate-700 flex items-center justify-center transition shadow"
+            >
+              <Heart className={`w-3.5 h-3.5 ${isFavorite ? "fill-red-500 text-red-500" : "text-slate-600"}`} />
+            </button>
           </div>
-        )}
+        </div>
 
         {/* Content Section */}
         <div className="p-4 space-y-2.5">

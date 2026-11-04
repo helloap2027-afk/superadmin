@@ -35,6 +35,23 @@ const ALL_14_CATEGORIES = [
   { id: 'dentists', name: 'Dentists', slug: 'dentists', icon: '🦷', bgColor: '#F0FDFA' },
 ];
 
+const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
+  restaurants: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
+  hotels: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop&q=80",
+  "beauty-spa": "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80",
+  "home-decor": "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&auto=format&fit=crop&q=80",
+  "ask-astro": "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=80",
+  "wedding-planning": "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&auto=format&fit=crop&q=80",
+  education: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80",
+  "rent-hire": "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&auto=format&fit=crop&q=80",
+  hospitals: "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=800&auto=format&fit=crop&q=80",
+  contractors: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&auto=format&fit=crop&q=80",
+  "pet-shops": "https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=800&auto=format&fit=crop&q=80",
+  "pg-hostels": "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&auto=format&fit=crop&q=80",
+  "estate-agent": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
+  dentists: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&auto=format&fit=crop&q=80",
+};
+
 const getCategoryEmoji = (iconName?: string | null, slug?: string): string => {
   const s = (slug || iconName || '').toLowerCase();
   if (s.includes('rest') || s.includes('food') || s.includes('utensil')) return '🍽️';
@@ -101,6 +118,37 @@ export default function App() {
   const [enquiryMsg, setEnquiryMsg] = useState('');
   const [enquiryPhone, setEnquiryPhone] = useState('');
   const [isSendingEnquiry, setIsSendingEnquiry] = useState(false);
+
+  // Selected Business Details Modal
+  const [selectedBusiness, setSelectedBusiness] = useState<any>(null);
+
+  // Add Your Business Free Modal (Vendor Onboarding)
+  const [showAddBusinessModal, setShowAddBusinessModal] = useState(false);
+  const [newBizName, setNewBizName] = useState('');
+  const [newBizCategory, setNewBizCategory] = useState('restaurants');
+  const [newBizCity, setNewBizCity] = useState<'Hyderabad' | 'Vijayawada' | 'Guntur'>('Hyderabad');
+  const [newBizLocality, setNewBizLocality] = useState('Hitec City');
+  const [newBizPhone, setNewBizPhone] = useState('');
+  const [newBizWhatsapp, setNewBizWhatsapp] = useState('');
+  const [newBizDesc, setNewBizDesc] = useState('');
+  const [newBizCoverPhoto, setNewBizCoverPhoto] = useState('https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80');
+  const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
+
+  // CMS Pages Modal State (About, Terms, FAQ, Contact)
+  const [activeCmsModal, setActiveCmsModal] = useState<'about' | 'faq' | 'terms' | 'contact' | 'privacy' | null>(null);
+  const [cmsPageData, setCmsPageData] = useState<any>(null);
+  const [isLoadingCms, setIsLoadingCms] = useState(false);
+  const [expandedFaqIndex, setExpandedFaqIndex] = useState<number | null>(0);
+
+  // Contact Form inside Mobile Modal
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactSubject, setContactSubject] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
+
   const [myEnquiries, setMyEnquiries] = useState<any[]>([
     {
       referenceNo: 'ENQ-2026-HYD-9812',
@@ -128,8 +176,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/categories`, {
         headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Accept': 'application/json'
         }
       });
       const json = await res.json();
@@ -163,18 +210,144 @@ export default function App() {
       const url = `${API_BASE}/search/businesses?city=${selectedCity.toLowerCase()}${catParam}${qParam}`;
       const res = await fetch(url, {
         headers: {
-          'Accept': 'application/json',
-          'Cache-Control': 'no-cache'
+          'Accept': 'application/json'
         }
       });
       const json = await res.json();
-      if (json.success && Array.isArray(json.data)) {
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
         setBusinesses(json.data);
+      } else if (selectedCategory !== 'All') {
+        // Broaden search to include verified items across cities if this city has 0
+        const broadUrl = `${API_BASE}/search/businesses?category=${selectedCategory}${qParam}`;
+        const broadRes = await fetch(broadUrl, { headers: { 'Accept': 'application/json' } });
+        const broadJson = await broadRes.json();
+        if (broadJson.success && Array.isArray(broadJson.data) && broadJson.data.length > 0) {
+          setBusinesses(broadJson.data);
+        } else {
+          setBusinesses(json.data || []);
+        }
+      } else {
+        setBusinesses(json.data || []);
       }
     } catch (e) {
       console.log('Error fetching businesses:', e);
     } finally {
       setIsLoadingBusinesses(false);
+    }
+  };
+
+  // Register New Business directly in MySQL hello_db
+  const handleAddBusinessSubmit = async () => {
+    if (!newBizName.trim()) {
+      Alert.alert('Required Field', 'Please enter your Business Name.');
+      return;
+    }
+    if (!newBizPhone.trim()) {
+      Alert.alert('Required Field', 'Please enter your Contact Phone Number.');
+      return;
+    }
+
+    setIsSubmittingBiz(true);
+    try {
+      const selectedCat = categories.find((c: any) => c.slug === newBizCategory) || categories[0];
+      const payload = {
+        name: newBizName.trim(),
+        categoryId: selectedCat?.id || 'cat-restaurants',
+        categorySlug: newBizCategory,
+        citySlug: newBizCity.toLowerCase(),
+        locality: newBizLocality.trim() || 'Central',
+        phone: newBizPhone.trim(),
+        whatsapp: (newBizWhatsapp || newBizPhone).trim(),
+        description: newBizDesc.trim() || `${newBizName} is a verified provider in ${newBizLocality}, ${newBizCity}.`,
+        coverPhoto: (newBizCoverPhoto || '').trim() || undefined,
+        coverImageUrl: (newBizCoverPhoto || '').trim() || undefined
+      };
+
+      const res = await fetch(`${API_BASE}/businesses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Failed to register business in database');
+      }
+
+      const created = json.data;
+      setBusinesses([created, ...businesses]);
+      setShowAddBusinessModal(false);
+      setNewBizName('');
+      setNewBizPhone('');
+      setNewBizWhatsapp('');
+      setNewBizDesc('');
+      setNewBizCoverPhoto('');
+      setSelectedCategory(newBizCategory);
+      setSelectedCity(newBizCity);
+
+      Alert.alert(
+        'Business Created in MySQL hello_db! 🎉',
+        `"${created.name}" is now stored in the database and visible immediately in ${newBizCity}.`
+      );
+    } catch (err: any) {
+      Alert.alert('Registration Error', err?.message || 'Could not save business to database.');
+    } finally {
+      setIsSubmittingBiz(false);
+    }
+  };
+
+  const openCmsPage = async (slug: 'about' | 'faq' | 'terms' | 'contact' | 'privacy') => {
+    setActiveCmsModal(slug);
+    setIsLoadingCms(true);
+    setContactSuccess(false);
+    try {
+      const res = await fetch(`${API_BASE}/cms/pages/${slug}?lang=en`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setCmsPageData(json.data);
+      } else {
+        setCmsPageData(null);
+      }
+    } catch (e) {
+      console.log('Error fetching CMS page:', e);
+      setCmsPageData(null);
+    } finally {
+      setIsLoadingCms(false);
+    }
+  };
+
+  const handleContactSubmit = async () => {
+    if (!contactName.trim() || !contactEmail.trim() || !contactMessage.trim()) {
+      Alert.alert('Required Fields', 'Please enter your name, email, and message.');
+      return;
+    }
+    setIsSubmittingContact(true);
+    try {
+      const res = await fetch(`${API_BASE}/cms/contact`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: contactName.trim(),
+          email: contactEmail.trim(),
+          phone: contactPhone.trim() || undefined,
+          subject: contactSubject.trim() || 'Mobile Contact Message',
+          message: contactMessage.trim()
+        })
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Failed to submit contact message');
+      }
+      setContactSuccess(true);
+      setContactName('');
+      setContactEmail('');
+      setContactPhone('');
+      setContactSubject('');
+      setContactMessage('');
+      Alert.alert('Message Sent & Saved in DB! 🎉', 'Your message has been stored in MySQL hello_db. Our team will reach out to you shortly.');
+    } catch (e: any) {
+      Alert.alert('Submission Error', e?.message || 'Could not send message.');
+    } finally {
+      setIsSubmittingContact(false);
     }
   };
 
@@ -564,6 +737,98 @@ export default function App() {
                 </View>
               </View>
             )}
+
+            {/* COMPANY INFORMATION & CMS PAGES (STORED IN DB) */}
+            <View style={{ marginTop: 20 }}>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                Company & Information (Live DB)
+              </Text>
+
+              {/* 1. About Us */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('about')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#EFF6FF' }]}>
+                    <Text style={{ fontSize: 16 }}>ℹ️</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>About Hello-Hi</Text>
+                    <Text style={styles.cmsMenuSub}>Mission, pillars & verified discovery engine</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+
+              {/* 2. FAQs */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('faq')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FAF5FF' }]}>
+                    <Text style={{ fontSize: 16 }}>❓</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>Frequently Asked Questions (FAQ)</Text>
+                    <Text style={styles.cmsMenuSub}>Instant answers about verification & quotes</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+
+              {/* 3. Terms & Conditions */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('terms')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F0FDF4' }]}>
+                    <Text style={{ fontSize: 16 }}>📜</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>Terms & Conditions</Text>
+                    <Text style={styles.cmsMenuSub}>Platform rules, merchant & customer policy</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+
+              {/* 4. Contact & Support */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('contact')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FFF7ED' }]}>
+                    <Text style={{ fontSize: 16 }}>📞</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>Contact Us & Support</Text>
+                    <Text style={styles.cmsMenuSub}>Toll-free, WhatsApp desk & DB enquiry form</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+
+              {/* 5. Privacy Policy */}
+              <TouchableOpacity
+                onPress={() => openCmsPage('privacy')}
+                style={styles.cmsMenuItem}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F8FAFC' }]}>
+                    <Text style={{ fontSize: 16 }}>🛡️</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cmsMenuTitle}>Privacy Policy (DPDP Act 2023)</Text>
+                    <Text style={styles.cmsMenuSub}>Data minimization & encryption protections</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         ) : (
           /* ================= HOME TAB (MAIN HUB) ================= */
@@ -610,7 +875,7 @@ export default function App() {
               </View>
 
               <TouchableOpacity
-                onPress={() => setMode('vendor')}
+                onPress={() => setShowAddBusinessModal(true)}
                 style={styles.promoBanner2}
               >
                 <View>
@@ -685,18 +950,45 @@ export default function App() {
                   <Text style={{ fontSize: 28 }}>🏢</Text>
                   <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginTop: 4 }}>No listings in this category yet</Text>
                   <Text style={{ fontSize: 11, color: '#64748B', textAlign: 'center', marginTop: 2 }}>
-                    Add Your Business Free to be listed instantly!
+                    Be the first verified listing in {selectedCity}!
                   </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowAddBusinessModal(true)}
+                    style={{ marginTop: 10, backgroundColor: '#0076D7', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12 }}
+                  >
+                    <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '800' }}>Add Your Business Free +</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
-                businesses.map((biz: any) => (
-                  <View key={biz.id} style={styles.businessCard}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <View style={{ flex: 1, paddingRight: 8 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Text style={styles.bizCardTitle} numberOfLines={1}>{biz.name}</Text>
-                          <Text style={{ color: '#0076D7', fontSize: 11, fontWeight: 'bold' }}>✓</Text>
+                businesses.map((biz: any) => {
+                  const cardImg = biz.coverImageUrl || biz.imageUrl || biz.image || CATEGORY_DEFAULT_IMAGES[biz.primaryCategory?.slug || biz.category || 'restaurants'] || CATEGORY_DEFAULT_IMAGES['restaurants'];
+                  return (
+                    <TouchableOpacity
+                      key={biz.id}
+                      activeOpacity={0.88}
+                      onPress={() => setSelectedBusiness(biz)}
+                      style={styles.businessCard}
+                    >
+                      {/* Business Cover Photo Banner */}
+                      <View style={{ width: '100%', height: 120, borderRadius: 12, overflow: 'hidden', marginBottom: 10, backgroundColor: '#E2E8F0' }}>
+                        <Image
+                          source={{ uri: cardImg }}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                        <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(15, 23, 42, 0.8)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 }}>
+                          <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '800' }}>
+                            {biz.primaryCategory?.name || 'Verified'}
+                          </Text>
                         </View>
+                      </View>
+
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <View style={{ flex: 1, paddingRight: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Text style={styles.bizCardTitle} numberOfLines={1}>{biz.name}</Text>
+                            <Text style={{ color: '#0076D7', fontSize: 11, fontWeight: 'bold' }}>✓</Text>
+                          </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                           <Text style={{ fontSize: 11, fontWeight: '800', color: '#F59E0B' }}>★ {biz.averageRating || 4.8}</Text>
                           <Text style={{ fontSize: 10, color: '#64748B' }}>({biz.totalReviews || 45} reviews)</Text>
@@ -708,13 +1000,19 @@ export default function App() {
                         {biz.description && (
                           <Text style={styles.bizCardDesc} numberOfLines={2}>{biz.description}</Text>
                         )}
+                        <Text style={{ fontSize: 10, color: '#0076D7', fontWeight: '700', marginTop: 4 }}>
+                          Tap for Full Profile, Timings & Services →
+                        </Text>
                       </View>
                     </View>
 
                     {/* Action Buttons: Call Now, WhatsApp, Instant Quote */}
                     <View style={styles.bizButtonRow}>
                       <TouchableOpacity
-                        onPress={() => Alert.alert('Call Merchant', `Dialing ${biz.contacts?.callNumber || biz.primaryPhone || '+91 98480 22334'}...`)}
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
+                          Alert.alert('Call Merchant', `Dialing ${biz.contacts?.callNumber || biz.primaryPhone || '+91 98480 22334'}...`);
+                        }}
                         style={styles.bizCallBtn}
                       >
                         <Text style={{ fontSize: 11 }}>📞</Text>
@@ -722,7 +1020,10 @@ export default function App() {
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        onPress={() => Alert.alert('WhatsApp Chat', `Opening WhatsApp for ${biz.name}...`)}
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
+                          Alert.alert('WhatsApp Chat', `Opening WhatsApp for ${biz.name}...`);
+                        }}
                         style={styles.bizWhatsappBtn}
                       >
                         <Text style={{ fontSize: 11 }}>💬</Text>
@@ -730,7 +1031,8 @@ export default function App() {
                       </TouchableOpacity>
 
                       <TouchableOpacity
-                        onPress={() => {
+                        onPress={(e) => {
+                          e?.stopPropagation?.();
                           setEnquiryModalBiz(biz);
                           setEnquiryPhone(user?.phoneNumber || '');
                         }}
@@ -740,9 +1042,10 @@ export default function App() {
                         <Text style={styles.bizBtnText}>Get Quote</Text>
                       </TouchableOpacity>
                     </View>
-                  </View>
-                ))
-              )}
+                  </TouchableOpacity>
+                );
+              })
+            )}
             </View>
           </View>
         )}
@@ -766,9 +1069,9 @@ export default function App() {
           <Text style={[styles.navLabel, activeTab === 'Services' && styles.navLabelActive]}>Services</Text>
         </TouchableOpacity>
 
-        {/* Center Floating Plus / Mode Switcher */}
+        {/* Center Floating Plus: Add Your Business Free (Vendor Registration) */}
         <TouchableOpacity
-          onPress={() => setMode(mode === 'customer' ? 'vendor' : 'customer')}
+          onPress={() => setShowAddBusinessModal(true)}
           style={styles.centerFloatingBtn}
         >
           <Text style={{ fontSize: 22, color: '#FFF', fontWeight: '900' }}>➕</Text>
@@ -944,17 +1247,24 @@ export default function App() {
                 </View>
 
                 {/* Terms and Conditions Checkbox */}
-                <TouchableOpacity
-                  onPress={() => setAgreedTerms(!agreedTerms)}
-                  style={styles.termsRow}
-                >
-                  <View style={[styles.checkbox, agreedTerms && styles.checkboxChecked]}>
+                <View style={styles.termsRow}>
+                  <TouchableOpacity
+                    onPress={() => setAgreedTerms(!agreedTerms)}
+                    style={[styles.checkbox, agreedTerms && styles.checkboxChecked]}
+                  >
                     {agreedTerms && <Text style={{ color: '#FFF', fontSize: 11, fontWeight: '900' }}>✓</Text>}
-                  </View>
+                  </TouchableOpacity>
                   <Text style={styles.termsText}>
-                    I Agree to <Text style={{ color: '#0076D7', fontWeight: '700' }}>Terms and Conditions</Text> & <Text style={{ color: '#0076D7', fontWeight: '700' }}>Privacy Policy</Text>
+                    I Agree to{' '}
+                    <Text onPress={() => openCmsPage('terms')} style={{ color: '#0076D7', fontWeight: '700' }}>
+                      Terms and Conditions
+                    </Text>{' '}
+                    &{' '}
+                    <Text onPress={() => openCmsPage('privacy')} style={{ color: '#0076D7', fontWeight: '700' }}>
+                      Privacy Policy
+                    </Text>
                   </Text>
-                </TouchableOpacity>
+                </View>
 
                 {/* Action Button: Login with OTP / Register with OTP */}
                 <TouchableOpacity
@@ -1033,6 +1343,502 @@ export default function App() {
               style={{ marginTop: 10, alignSelf: 'center' }}
             >
               <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '600' }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* BUSINESS DETAILS MODAL (OPENED ON CARD CLICK) */}
+      {selectedBusiness && (
+        <Modal visible={true} transparent animationType="slide">
+          <View style={styles.modalBackdrop}>
+            <View style={styles.bizDetailModal}>
+              <View style={styles.bizDetailHeader}>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                    <View style={styles.verifiedTag}>
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#16A34A' }}>✓ VERIFIED</Text>
+                    </View>
+                    <View style={styles.openNowTag}>
+                      <Text style={{ fontSize: 9, fontWeight: '800', color: '#0076D7' }}>● OPEN NOW</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.bizDetailTitle}>{selectedBusiness.name}</Text>
+                  <Text style={styles.bizDetailCategory}>
+                    {selectedBusiness.primaryCategory?.name || selectedBusiness.categoryName || 'Verified Merchant'}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedBusiness(null)} style={styles.closeModalCircle}>
+                  <Text style={{ fontSize: 16, color: '#64748B', fontWeight: '800' }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+                {/* Rating Strip */}
+                <View style={styles.detailRatingStrip}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={{ fontSize: 16, color: '#F59E0B', fontWeight: '900' }}>★</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>{selectedBusiness.averageRating || 4.9}</Text>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>({selectedBusiness.totalReviews || 45} verified reviews)</Text>
+                  </View>
+                  <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '700' }}>● Instant Quotes</Text>
+                </View>
+
+                {/* Location Box */}
+                <View style={styles.detailInfoBox}>
+                  <Text style={styles.detailSectionLabel}>📍 LOCATION & ADDRESS</Text>
+                  <Text style={styles.detailLocationText}>
+                    {selectedBusiness.location?.addressLine1 || selectedBusiness.location?.localityName || selectedLocality}, {selectedBusiness.location?.cityName || selectedCity}
+                    {selectedBusiness.location?.pincode ? ` - ${selectedBusiness.location?.pincode}` : ''}
+                  </Text>
+                  {selectedBusiness.location?.landmark ? (
+                    <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Landmark: {selectedBusiness.location?.landmark}</Text>
+                  ) : null}
+                </View>
+
+                {/* Working Hours */}
+                <View style={styles.detailInfoBox}>
+                  <Text style={styles.detailSectionLabel}>🕒 WORKING HOURS</Text>
+                  <Text style={styles.detailInfoValue}>Monday - Sunday: 09:00 AM - 09:30 PM (Always Open)</Text>
+                </View>
+
+                {/* About / Description */}
+                <View style={styles.detailInfoBox}>
+                  <Text style={styles.detailSectionLabel}>ℹ️ ABOUT THIS BUSINESS</Text>
+                  <Text style={styles.detailDescText}>
+                    {selectedBusiness.description || `${selectedBusiness.name} provides premier verified services with instant bookings, certified staff, and transparent pricing in ${selectedCity}.`}
+                  </Text>
+                </View>
+
+                {/* Live Database Entity Badge */}
+                <View style={styles.detailDbBadge}>
+                  <Text style={{ fontSize: 10, color: '#0369A1', fontWeight: '700' }}>
+                    ● MySQL Entity ID: {selectedBusiness.id} • Live in hello_db
+                  </Text>
+                </View>
+              </ScrollView>
+
+              {/* Action Buttons */}
+              <View style={styles.detailActionRow}>
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Calling Merchant', `Dialing ${selectedBusiness.contacts?.callNumber || selectedBusiness.primaryPhone || '+91 98480 22334'}...`)}
+                  style={styles.detailCallBtn}
+                >
+                  <Text style={{ fontSize: 13 }}>📞</Text>
+                  <Text style={{ color: '#0F172A', fontWeight: '800', fontSize: 12 }}>Call</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => Alert.alert('WhatsApp', `Opening WhatsApp for ${selectedBusiness.name}...`)}
+                  style={styles.detailWaBtn}
+                >
+                  <Text style={{ fontSize: 13 }}>💬</Text>
+                  <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>WhatsApp</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    const b = selectedBusiness;
+                    setSelectedBusiness(null);
+                    setEnquiryModalBiz(b);
+                    setEnquiryPhone(user?.phoneNumber || '');
+                  }}
+                  style={styles.detailQuoteBtn}
+                >
+                  <Text style={{ fontSize: 13 }}>⚡</Text>
+                  <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 12 }}>Get Quote</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* ADD YOUR BUSINESS FREE MODAL (VENDOR REGISTRATION INTO MYSQL) */}
+      <Modal visible={showAddBusinessModal} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.addBizModalCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <View>
+                <Text style={{ fontSize: 10, fontWeight: '900', color: '#FF6B35', textTransform: 'uppercase' }}>100% Free Setup 🚀</Text>
+                <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>Add Your Business</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowAddBusinessModal(false)} style={styles.closeModalCircle}>
+                <Text style={{ fontSize: 16, color: '#64748B', fontWeight: '800' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 10 }}>
+              Stored directly in MySQL hello_db database and listed instantly.
+            </Text>
+
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+              {/* Business Name */}
+              <Text style={styles.fieldLabel}>Business Name *</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="e.g. Royal Dental & Implant Clinic"
+                placeholderTextColor="#94A3B8"
+                value={newBizName}
+                onChangeText={setNewBizName}
+              />
+
+              {/* Category Picker */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Category *</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 4 }}>
+                {categories.map((c: any) => {
+                  const isSel = newBizCategory === c.slug;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => setNewBizCategory(c.slug)}
+                      style={[
+                        styles.catSelectPill,
+                        isSel && styles.catSelectPillActive
+                      ]}
+                    >
+                      <Text style={{ fontSize: 11, marginRight: 3 }}>{c.icon}</Text>
+                      <Text style={[styles.catSelectPillText, isSel && styles.catSelectPillTextActive]}>
+                        {c.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* City Selection */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Pilot City *</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginVertical: 4 }}>
+                {(['Hyderabad', 'Vijayawada', 'Guntur'] as const).map((city) => (
+                  <TouchableOpacity
+                    key={city}
+                    onPress={() => {
+                      setNewBizCity(city);
+                      setNewBizLocality(city === 'Hyderabad' ? 'Hitec City' : city === 'Vijayawada' ? 'Benz Circle' : 'Brodipet');
+                    }}
+                    style={[
+                      styles.citySelectBtn,
+                      newBizCity === city && styles.citySelectBtnActive
+                    ]}
+                  >
+                    <Text style={[styles.citySelectBtnText, newBizCity === city && styles.citySelectBtnTextActive]}>
+                      {city}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Locality */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Locality / Area *</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="e.g. Banjara Hills, Benz Circle, Arundelpet..."
+                placeholderTextColor="#94A3B8"
+                value={newBizLocality}
+                onChangeText={setNewBizLocality}
+              />
+
+              {/* Phone */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Contact Phone Number *</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="e.g. 98480 12345"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                value={newBizPhone}
+                onChangeText={setNewBizPhone}
+              />
+
+              {/* WhatsApp */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>WhatsApp Number</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="Same as phone or enter number"
+                placeholderTextColor="#94A3B8"
+                keyboardType="phone-pad"
+                value={newBizWhatsapp}
+                onChangeText={setNewBizWhatsapp}
+              />
+
+              {/* Description */}
+              <Text style={[styles.fieldLabel, { marginTop: 10 }]}>Description / Services</Text>
+              <TextInput
+                style={[styles.modalTextInput, { height: 60 }]}
+                placeholder="Brief summary of your services..."
+                placeholderTextColor="#94A3B8"
+                multiline
+                numberOfLines={2}
+                value={newBizDesc}
+                onChangeText={setNewBizDesc}
+              />
+
+              {/* Cover Photo / Image URL & Preset Selection */}
+              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Cover Image / Photo URL</Text>
+              <TextInput
+                style={styles.modalTextInput}
+                placeholder="https://images.unsplash.com/... or paste image URL"
+                placeholderTextColor="#94A3B8"
+                value={newBizCoverPhoto}
+                onChangeText={setNewBizCoverPhoto}
+              />
+              <Text style={{ fontSize: 10, color: '#64748B', marginTop: 4, marginBottom: 6 }}>
+                Select quick category photo or enter image URL:
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                {Object.entries(CATEGORY_DEFAULT_IMAGES).map(([catKey, imgUrl]) => {
+                  const isSel = newBizCoverPhoto === imgUrl;
+                  return (
+                    <TouchableOpacity
+                      key={catKey}
+                      onPress={() => setNewBizCoverPhoto(imgUrl)}
+                      style={{
+                        marginRight: 8,
+                        borderRadius: 8,
+                        borderWidth: isSel ? 2 : 1,
+                        borderColor: isSel ? '#0076D7' : '#E2E8F0',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <Image source={{ uri: imgUrl }} style={{ width: 62, height: 44 }} resizeMode="cover" />
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+
+              {/* Selected Image Preview */}
+              {newBizCoverPhoto ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F0FDF4', padding: 8, borderRadius: 10, borderWidth: 1, borderColor: '#BBF7D0', gap: 10, marginBottom: 8 }}>
+                  <Image source={{ uri: newBizCoverPhoto }} style={{ width: 50, height: 40, borderRadius: 6 }} resizeMode="cover" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#16A34A' }}>✓ Image Ready for DB</Text>
+                    <Text style={{ fontSize: 9, color: '#64748B' }} numberOfLines={1}>{newBizCoverPhoto}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setNewBizCoverPhoto('')}>
+                    <Text style={{ fontSize: 10, color: '#EF4444', fontWeight: 'bold' }}>Clear</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+            </ScrollView>
+
+            <TouchableOpacity
+              onPress={handleAddBusinessSubmit}
+              disabled={isSubmittingBiz}
+              style={[styles.authActionBtn, { marginTop: 12 }]}
+            >
+              {isSubmittingBiz ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.authActionBtnText}>Register Business Free in MySQL 🚀</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* CMS PAGE MODAL (ABOUT, FAQ, TERMS, CONTACT, PRIVACY - LOADED FROM DB) */}
+      <Modal visible={activeCmsModal !== null} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.cmsModalContainer}>
+            {/* Header */}
+            <View style={styles.cmsModalHeader}>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#16A34A', textTransform: 'uppercase' }}>
+                    ● MySQL hello_db
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#94A3B8' }}>• Public API</Text>
+                </View>
+                <Text style={styles.cmsModalTitle}>
+                  {cmsPageData?.title || (
+                    activeCmsModal === 'about' ? 'About Hello-Hi' :
+                    activeCmsModal === 'faq' ? 'Frequently Asked Questions' :
+                    activeCmsModal === 'terms' ? 'Terms & Conditions' :
+                    activeCmsModal === 'contact' ? 'Contact & Support' : 'Privacy Policy'
+                  )}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setActiveCmsModal(null)} style={styles.closeModalCircle}>
+                <Text style={{ fontSize: 16, color: '#64748B', fontWeight: '800' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {isLoadingCms ? (
+              <View style={{ padding: 40, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="large" color="#0076D7" />
+                <Text style={{ marginTop: 12, fontSize: 12, color: '#64748B', fontWeight: '600' }}>
+                  Loading content from database...
+                </Text>
+              </View>
+            ) : (
+              <ScrollView style={{ maxHeight: 520 }} showsVerticalScrollIndicator={false}>
+                {/* Short Description */}
+                {cmsPageData?.shortDescription ? (
+                  <View style={styles.cmsDescBox}>
+                    <Text style={styles.cmsDescText}>{cmsPageData.shortDescription}</Text>
+                  </View>
+                ) : null}
+
+                {/* SPECIAL SECTION: FAQ ITEMS ACCORDION */}
+                {activeCmsModal === 'faq' && cmsPageData?.faqItems && Array.isArray(cmsPageData.faqItems) ? (
+                  <View style={{ marginTop: 10, marginBottom: 12 }}>
+                    <Text style={styles.sectionHeaderTitle}>Frequently Asked Questions ({cmsPageData.faqItems.length})</Text>
+                    {cmsPageData.faqItems.map((item: any, idx: number) => {
+                      const isExpanded = expandedFaqIndex === idx;
+                      return (
+                        <TouchableOpacity
+                          key={item.id || idx}
+                          activeOpacity={0.8}
+                          onPress={() => setExpandedFaqIndex(isExpanded ? null : idx)}
+                          style={styles.faqAccordionCard}
+                        >
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={styles.faqQuestionText}>
+                              {idx + 1}. {item.question}
+                            </Text>
+                            <Text style={{ fontSize: 14, color: '#0076D7', fontWeight: 'bold' }}>
+                              {isExpanded ? '▲' : '▼'}
+                            </Text>
+                          </View>
+                          {isExpanded && (
+                            <Text style={styles.faqAnswerText}>
+                              {item.answer}
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                ) : null}
+
+                {/* SPECIAL SECTION: CONTACT & SUPPORT CHANNELS & FORM */}
+                {activeCmsModal === 'contact' ? (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={styles.sectionHeaderTitle}>Official Support Helplines</Text>
+                    
+                    <View style={{ gap: 8, marginVertical: 8 }}>
+                      <TouchableOpacity
+                        onPress={() => Alert.alert('Dialing Toll Free', 'Connecting to 1800-425-HELLO (43556)...')}
+                        style={styles.contactActionPill}
+                      >
+                        <Text style={{ fontSize: 18 }}>📞</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>Toll Free Helpline</Text>
+                          <Text style={{ fontSize: 11, color: '#0076D7', fontWeight: '700' }}>1800-425-HELLO (43556)</Text>
+                        </View>
+                        <Text style={styles.callBadge}>Tap to Call</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => Alert.alert('Opening WhatsApp', 'Connecting to +91 98480 22338 WhatsApp Desk...')}
+                        style={styles.contactActionPill}
+                      >
+                        <Text style={{ fontSize: 18 }}>💬</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>WhatsApp Support Desk</Text>
+                          <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '700' }}>+91 98480 22338</Text>
+                        </View>
+                        <Text style={[styles.callBadge, { backgroundColor: '#DCFCE7', color: '#16A34A' }]}>Chat Now</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Direct Contact Form Stored in DB */}
+                    <View style={styles.contactFormBox}>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginBottom: 2 }}>
+                        Send Support Message
+                      </Text>
+                      <Text style={{ fontSize: 10, color: '#64748B', marginBottom: 10 }}>
+                        Stored in MySQL hello_db.contact_submissions.
+                      </Text>
+
+                      <Text style={styles.fieldLabel}>Your Name *</Text>
+                      <TextInput
+                        style={styles.modalTextInput}
+                        placeholder="e.g. Anand Varma"
+                        placeholderTextColor="#94A3B8"
+                        value={contactName}
+                        onChangeText={setContactName}
+                      />
+
+                      <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Email Address *</Text>
+                      <TextInput
+                        style={styles.modalTextInput}
+                        placeholder="e.g. anand@example.com"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="email-address"
+                        value={contactEmail}
+                        onChangeText={setContactEmail}
+                      />
+
+                      <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Mobile Number</Text>
+                      <TextInput
+                        style={styles.modalTextInput}
+                        placeholder="e.g. 98480 12345"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="phone-pad"
+                        value={contactPhone}
+                        onChangeText={setContactPhone}
+                      />
+
+                      <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Subject / Topic</Text>
+                      <TextInput
+                        style={styles.modalTextInput}
+                        placeholder="e.g. Business Listing, Verification..."
+                        placeholderTextColor="#94A3B8"
+                        value={contactSubject}
+                        onChangeText={setContactSubject}
+                      />
+
+                      <Text style={[styles.fieldLabel, { marginTop: 8 }]}>Message *</Text>
+                      <TextInput
+                        style={[styles.modalTextInput, { height: 65 }]}
+                        placeholder="How can our support team help you?"
+                        placeholderTextColor="#94A3B8"
+                        multiline
+                        numberOfLines={3}
+                        value={contactMessage}
+                        onChangeText={setContactMessage}
+                      />
+
+                      <TouchableOpacity
+                        onPress={handleContactSubmit}
+                        disabled={isSubmittingContact}
+                        style={[styles.authActionBtn, { marginTop: 10 }]}
+                      >
+                        {isSubmittingContact ? (
+                          <ActivityIndicator color="#FFF" />
+                        ) : (
+                          <Text style={styles.authActionBtnText}>Send Message to DB 🚀</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
+
+                {/* HTML / Plain Text Content from DB */}
+                {cmsPageData?.content ? (
+                  <View style={{ marginTop: 10 }}>
+                    <Text style={styles.sectionHeaderTitle}>Official Policy Documentation</Text>
+                    <Text style={styles.cmsContentText}>
+                      {cmsPageData.content.replace(/<[^>]+>/g, '\n').replace(/\n\s*\n/g, '\n\n').trim()}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.cmsFooterMeta}>
+                  <Text style={{ fontSize: 10, color: '#94A3B8' }}>
+                    Database Record ID: {cmsPageData?.id || 'live-db-record'}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#16A34A', fontWeight: '700' }}>
+                    Status: {cmsPageData?.status || 'PUBLISHED'} • {cmsPageData?.visibility || 'PUBLIC'}
+                  </Text>
+                </View>
+              </ScrollView>
+            )}
+
+            <TouchableOpacity
+              onPress={() => setActiveCmsModal(null)}
+              style={[styles.signOutBtn, { marginTop: 10, backgroundColor: '#0F172A' }]}
+            >
+              <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '800' }}>Close Page</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1694,5 +2500,329 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 12,
     fontWeight: '800',
+  },
+  // Business Detail Modal Styles
+  bizDetailModal: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxHeight: '90%',
+  },
+  bizDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingBottom: 12,
+    marginBottom: 10,
+  },
+  verifiedTag: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  openNowTag: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  bizDetailTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  bizDetailCategory: {
+    fontSize: 12,
+    color: '#0076D7',
+    fontWeight: '700',
+    marginTop: 1,
+  },
+  closeModalCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailRatingStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    padding: 10,
+    borderRadius: 12,
+    marginVertical: 8,
+  },
+  detailInfoBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    marginVertical: 5,
+  },
+  detailSectionLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
+  detailLocationText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  detailInfoValue: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  detailDescText: {
+    fontSize: 12,
+    color: '#475569',
+    lineHeight: 18,
+  },
+  detailDbBadge: {
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    borderRadius: 10,
+    padding: 8,
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  detailActionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
+  },
+  detailCallBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  detailWaBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#22C55E',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  detailQuoteBtn: {
+    flex: 1.2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#0076D7',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  // Add Business Modal Styles
+  addBizModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    width: '100%',
+    maxHeight: '92%',
+  },
+  catSelectPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  catSelectPillActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#0076D7',
+  },
+  catSelectPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  catSelectPillTextActive: {
+    color: '#0076D7',
+  },
+  citySelectBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  citySelectBtnActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#0076D7',
+  },
+  citySelectBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  citySelectBtnTextActive: {
+    color: '#0076D7',
+  },
+  // CMS & Information Page Styles
+  cmsMenuItem: {
+    padding: 12,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cmsMenuIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cmsMenuTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  cmsMenuSub: {
+    fontSize: 10,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  cmsModalContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 18,
+    width: '100%',
+    maxWidth: 440,
+    maxHeight: '90%',
+  },
+  cmsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  cmsModalTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  cmsDescBox: {
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 10,
+    borderLeftWidth: 3,
+    borderLeftColor: '#0076D7',
+    marginVertical: 8,
+  },
+  cmsDescText: {
+    fontSize: 11,
+    color: '#475569',
+    lineHeight: 16,
+  },
+  sectionHeaderTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0F172A',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  faqAccordionCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 8,
+  },
+  faqQuestionText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    flex: 1,
+    paddingRight: 8,
+  },
+  faqAnswerText: {
+    fontSize: 11,
+    color: '#475569',
+    lineHeight: 16,
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  contactActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 10,
+  },
+  callBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0076D7',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  contactFormBox: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 10,
+  },
+  cmsContentText: {
+    fontSize: 12,
+    color: '#334155',
+    lineHeight: 18,
+  },
+  cmsFooterMeta: {
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 });
