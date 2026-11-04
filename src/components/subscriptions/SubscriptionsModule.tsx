@@ -10,6 +10,9 @@ import {
   Search,
   Filter,
   Eye,
+  Edit2,
+  Plus,
+  AlertTriangle,
   Trash2,
   CheckSquare,
   X,
@@ -87,6 +90,130 @@ export function SubscriptionsModule() {
 
   // Detail Modal
   const [selectedSub, setSelectedSub] = useState<SubscriptionItem | null>(null);
+
+  // Plan Edit / Create / Delete state
+  const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [deleteConfirmPlan, setDeleteConfirmPlan] = useState<SubscriptionPlan | null>(null);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+
+  // Plan form fields
+  const [planForm, setPlanForm] = useState({
+    id: "",
+    name: "",
+    description: "",
+    price: 0,
+    currency: "INR",
+    billing_interval: "MONTHLY",
+    featuresText: "",
+    status: "ACTIVE",
+  });
+
+  const handleOpenCreatePlan = () => {
+    setEditingPlan(null);
+    setPlanForm({
+      id: "plan_" + Date.now(),
+      name: "",
+      description: "",
+      price: 999,
+      currency: "INR",
+      billing_interval: "MONTHLY",
+      featuresText: "Verified Merchant Trust Badge\n25 Instant Leads / mo\nDirect WhatsApp Enquiry Button",
+      status: "ACTIVE",
+    });
+    setIsPlanModalOpen(true);
+  };
+
+  const handleOpenEditPlan = (plan: SubscriptionPlan) => {
+    setEditingPlan(plan);
+    const featuresList = Array.isArray(plan.features) ? plan.features.join("\n") : "";
+    setPlanForm({
+      id: plan.id,
+      name: plan.name,
+      description: plan.description || "",
+      price: plan.price,
+      currency: plan.currency || "INR",
+      billing_interval: plan.billing_interval || "MONTHLY",
+      featuresText: featuresList,
+      status: plan.status || "ACTIVE",
+    });
+    setIsPlanModalOpen(true);
+  };
+
+  const handleSavePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!planForm.name.trim()) {
+      alert("Plan name is required");
+      return;
+    }
+
+    const featuresArray = planForm.featuresText
+      .split("\n")
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
+
+    const payload = {
+      name: planForm.name.trim(),
+      description: planForm.description.trim(),
+      price: Number(planForm.price) || 0,
+      currency: planForm.currency,
+      billing_interval: planForm.billing_interval,
+      features: featuresArray,
+      status: planForm.status,
+    };
+
+    try {
+      setIsSavingPlan(true);
+      const url = editingPlan
+        ? `http://localhost:4000/api/v1/admin/subscriptions/plans/${editingPlan.id}`
+        : "http://localhost:4000/api/v1/admin/subscriptions/plans";
+      const method = editingPlan ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || "Plan saved successfully!");
+        setIsPlanModalOpen(false);
+        await fetchPlans();
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Failed to save plan");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
+  const handleDeletePlan = async () => {
+    if (!deleteConfirmPlan) return;
+    try {
+      setIsSavingPlan(true);
+      const res = await fetch(
+        `http://localhost:4000/api/v1/admin/subscriptions/plans/${deleteConfirmPlan.id}`,
+        { method: "DELETE" }
+      );
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || "Plan deleted successfully!");
+        setDeleteConfirmPlan(null);
+        await fetchPlans();
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Delete plan failed");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
 
   // Multi-select and Delete state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
