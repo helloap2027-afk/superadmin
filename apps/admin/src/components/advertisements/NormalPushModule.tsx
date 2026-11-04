@@ -22,6 +22,7 @@ import { TableSkeleton } from "@/components/shared/Skeletons";
 import { EmptyState } from "@/components/shared/StateComponents";
 import { PaginationControls } from "@/components/shared/PaginationControls";
 import { UnifiedPreviewModal } from "@/components/shared/UnifiedPreviewModal";
+import { GlobalPushSettingsModal } from "@/components/advertisements/GlobalPushSettingsModal";
 
 interface PushTemplateItem {
   id: string;
@@ -73,6 +74,7 @@ export function NormalPushModule() {
   const [editBody, setEditBody] = useState("");
   const [editStatus, setEditStatus] = useState<"ACTIVE" | "INACTIVE">("ACTIVE");
   const [isSaving, setIsSaving] = useState(false);
+  const [isGlobalPushSettingsOpen, setIsGlobalPushSettingsOpen] = useState(false);
 
   // Fetch Normal Push Logs (Customer / Business)
   const fetchLogs = useCallback(async () => {
@@ -164,7 +166,8 @@ export function NormalPushModule() {
   return (
     <div className="space-y-6">
       {/* Top Toggle Switch */}
-      <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 w-fit">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3 bg-white p-2 rounded-2xl border border-slate-200 w-fit">
         <button
           onClick={() => setActiveTab("logs")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
@@ -189,6 +192,16 @@ export function NormalPushModule() {
           <span>Automated Event Templates</span>
         </button>
       </div>
+
+      <button
+        onClick={() => setIsGlobalPushSettingsOpen(true)}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs shadow-2xs transition cursor-pointer"
+        title="Configure Global Push Notification branding, logo, sound, quiet hours, and kill switch"
+      >
+        <Sliders className="w-4 h-4 text-[#0076D7]" />
+        <span>Global Push Settings</span>
+      </button>
+    </div>
 
       {activeTab === "logs" ? (
         /* TAB 1: CUSTOMER & BUSINESS DELIVERY LOGS */
@@ -525,6 +538,7 @@ export function NormalPushModule() {
       )}
 
       {/* UNIFIED REALISTIC PREVIEW MODAL */}
+      <GlobalPushSettingsModal isOpen={isGlobalPushSettingsOpen} onClose={() => setIsGlobalPushSettingsOpen(false)} />
       <UnifiedPreviewModal
         isOpen={!!previewLog || !!previewTemplate}
         onClose={() => {

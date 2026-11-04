@@ -18,11 +18,9 @@ export function EmptyState({
   description,
   isSearch = false,
   onClearSearch,
-  actionText,
-  actionLabel,
+  actionText, actionLabel,
   onAction,
 }: EmptyStateProps) {
-  const finalActionText = actionText || actionLabel;
   const defaultTitle = isSearch ? "No matching records found" : "No records available";
   const defaultDesc = isSearch
     ? "Try refining your search terms or clearing active filters to see more results."
@@ -52,13 +50,13 @@ export function EmptyState({
         </button>
       )}
 
-      {!isSearch && finalActionText && onAction && (
+      {!isSearch && (actionText || actionLabel) && onAction && (
         <button
           type="button"
           onClick={onAction}
           className="mt-2 inline-flex items-center gap-1.5 px-4 py-2 bg-[#0076D7] text-white text-xs font-semibold rounded-xl hover:bg-[#0060b0] transition shadow-xs"
         >
-          {finalActionText}
+          {actionText || actionLabel}
         </button>
       )}
     </div>
