@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #0076D7;
+  --accent: #FF6B35;
+  --dark: #0B1220;
+}
+
+html, body {
+  max-width: 100%;
+  overflow-x: clip !important;
+  margin: 0;
+  padding: 0;
+  background-color: #F8FAFC;
+  color: #0F172A;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+/* Completely suppress all horizontal scrollbars across all browsers */
+*::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0px !important;
+  width: 0px !important;
+}
+
+/* Hide scrollbars for .no-scrollbar and .scrollbar-none */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
+}
+
+/* Eye-catching Blinking / Pulsing Animations for Floating App Download Badges */
+@keyframes app-blink-android {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0px rgba(16, 185, 129, 0);
+    border-color: rgba(51, 65, 85, 0.8);
+    opacity: 1;
+  }
+  15%, 50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 26px rgba(16, 185, 129, 0.9), 0 0 12px rgba(16, 185, 129, 0.7);
+    border-color: #10B981;
+    background-color: #0d1e16;
+  }
+  30% {
+    transform: scale(1.02);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+    border-color: rgba(16, 185, 129, 0.5);
+    background-color: #0b1220;
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    border-color: rgba(51, 65, 85, 0.8);
+  }
+}
+
+@keyframes app-blink-ios {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 0px rgba(56, 189, 248, 0);
+    border-color: rgba(51, 65, 85, 0.8);
+    opacity: 1;
+  }
+  15%, 50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 26px rgba(56, 189, 248, 0.9), 0 0 12px rgba(56, 189, 248, 0.7);
+    border-color: #38BDF8;
+    background-color: #0b1c2a;
+  }
+  30% {
+    transform: scale(1.02);
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+    border-color: rgba(56, 189, 248, 0.5);
+    background-color: #0b1220;
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    border-color: rgba(51, 65, 85, 0.8);
+  }
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    transform: translateX(-150%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(250%) skewX(-20deg);
+  }
+}
+
+.animate-app-blink-android {
+  animation: app-blink-android 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-app-blink-ios {
+  animation: app-blink-ios 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation-delay: 1s;
+}
+
+.animate-shimmer-sweep {
+  animation: shimmer-sweep 2.5s ease-in-out infinite;
+}
+
+/* Accessibility: Respect user's reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-app-blink-android,
+  .animate-app-blink-ios,
+  .animate-shimmer-sweep {
+    animation: none !important;
+    transform: none !important;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+  }
+}
+
+/* Global Toast Progress Bar Animation */
+@keyframes toast-progress {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
