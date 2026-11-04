@@ -34,15 +34,5 @@ export const CMS_SUBMENUS: CMSMenuItem[] = [
     slug: "contact-support",
     title: "Contact & Support",
     description: "Manage official grievance emails, phone lines, and regional Andhra Pradesh headquarters."
-  },
-  {
-    slug: "cookie-policy",
-    title: "Cookie Policy",
-    description: "Manage cookies and tracking consent preferences according to global privacy standards."
-  },
-  {
-    slug: "community-guidelines",
-    title: "Community Guidelines",
-    description: "Manage codes of conduct, content moderation rules, and merchant integrity standards."
   }
 ];

@@ -206,12 +206,22 @@ export function AdminNavbar({
                 )}
               </div>
               <div className="max-h-64 overflow-y-auto divide-y divide-slate-50 text-xs">
-                {navNotifs.length === 0 ? (
+                {(!Array.isArray(navNotifs) || navNotifs.length === 0) ? (
                   <div className="p-4 text-center text-slate-400 text-xs">
                     No recent notifications in database
                   </div>
                 ) : (
-                  navNotifs.map((n) => (
+                  navNotifs.map((n) => {
+                    let dateStr = "Recent";
+                    try {
+                      if (n.created_at) {
+                        dateStr = new Date(n.created_at).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                        });
+                      }
+                    } catch {}
+                    return (
                     <div
                       key={n.id}
                       onClick={() => {
@@ -228,13 +238,10 @@ export function AdminNavbar({
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">{n.message}</p>
                       <span className="text-[10px] text-slate-400 mt-1 block">
-                        {new Date(n.created_at).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                        })}
+                        {dateStr}
                       </span>
                     </div>
-                  ))
+                  );})
                 )}
               </div>
               <div className="p-2 border-t border-slate-100 bg-slate-50/50 text-center">

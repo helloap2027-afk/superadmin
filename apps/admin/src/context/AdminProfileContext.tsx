@@ -57,7 +57,10 @@ export function AdminProfileProvider({ children }: { children: React.ReactNode }
     if (typeof window === "undefined") return null;
     try {
       const raw = localStorage.getItem("hello_admin_session");
-      return raw ? JSON.parse(raw) : null;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (typeof parsed !== "object" || parsed === null) return null;
+      return parsed;
     } catch {
       return null;
     }

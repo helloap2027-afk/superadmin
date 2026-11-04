@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+<<<<<<< HEAD
 import { ToastProvider } from "@/components/ToastProvider";
+=======
+import { ToastProvider } from "@/components/Toast";
+>>>>>>> feature/superadmin
 
 export const metadata: Metadata = {
   title: "HELLO — Discover Local. Connect Instantly.",
@@ -22,4 +26,3 @@ export default function RootLayout({
     </html>
   );
 }
-

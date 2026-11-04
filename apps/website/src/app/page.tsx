@@ -7,6 +7,7 @@ import { DesktopFilterSidebar } from "@/components/DesktopFilterSidebar";
 import { DesktopBizCard, BusinessItemCard } from "@/components/DesktopBizCard";
 import { DesktopRightSidebar } from "@/components/DesktopRightSidebar";
 import { DesktopFooter } from "@/components/DesktopFooter";
+import { toast } from "@/components/Toast";
 import { AP_EXPLORE_CATEGORIES, CuratedCollection } from "@/data/exploreData";
 import { useToast } from "@/components/ToastProvider";
 import { 
@@ -14,11 +15,16 @@ import {
   Sparkles, Loader2, Star, ShieldCheck, Plus, Building2, 
   Map as MapIcon, LayoutGrid, Tag, Calendar, DollarSign, 
   Navigation, Plane, Car, Train, FileText, CheckCircle2, ChevronRight, Share2, Heart, Zap,
+<<<<<<< HEAD
   Camera, Upload, Image as ImageIcon
+=======
+  Upload, Image as ImageIcon, Link as LinkIcon, Trash2
+>>>>>>> feature/superadmin
 } from "lucide-react";
 
 const API_BASE = "http://localhost:4000/api/v1";
 
+<<<<<<< HEAD
 const CATEGORY_PRESET_IMAGES: Record<string, string[]> = {
   restaurants: [
     "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
@@ -105,6 +111,38 @@ const CATEGORY_PRESET_IMAGES: Record<string, string[]> = {
     "https://images.unsplash.com/photo-1598256989800-fe5f95da9787?w=800&auto=format&fit=crop&q=80"
   ],
 };
+=======
+function PlayStoreIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1z"
+        fill="#EA4335"
+      />
+      <path
+        d="M47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0z"
+        fill="#4285F4"
+      />
+      <path
+        d="M47.1 512c4.4 0 8.9-.9 13.1-3.3l325.2-186.7-60.1-60.1L47.1 512z"
+        fill="#34A853"
+      />
+      <path
+        d="M475.2 238.4l-89.9-51.6-67.4 67.4 67.4 67.4 90.2-51.8c18-10.4 18-27.4-.3-41.4z"
+        fill="#FBBC04"
+      />
+    </svg>
+  );
+}
+
+function AppleLogoIcon({ className = "w-5 h-5" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 170 170" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.07-7.66-7.85-11.88-14.34-5.88-8.91-10.45-19.16-13.72-30.76-3.26-11.6-4.9-22.38-4.9-32.33 0-14.12 3.59-25.97 10.77-35.54 7.18-9.56 16.29-14.42 27.33-14.58 4.8 0 10.35 1.34 16.65 4.02 6.3 2.68 10.05 4.08 11.24 4.2 1.45-.24 5.37-1.64 11.76-4.2 6.39-2.57 11.83-3.78 16.33-3.64 12.3.67 22.32 5.35 30.06 14.04-10.73 6.51-16 15.52-15.82 27.03.18 9.07 3.65 16.69 10.4 22.86 6.75 6.17 14.65 9.77 23.7 10.8-2.3 6.83-4.92 13.57-7.86 20.21zM119.22 33.64c0-7.03 2.57-13.7 7.71-20.02 5.14-6.32 11.39-10.38 18.75-12.18.89 6.8-.75 13.3-4.92 19.51-4.17 6.21-10.49 10.43-18.96 12.69-.78-2.61-1.58-6.1-2.58-9.4z" />
+    </svg>
+  );
+}
+>>>>>>> feature/superadmin
 
 function HomeExploreContent() {
   const { showToast } = useToast();
@@ -170,6 +208,7 @@ function HomeExploreContent() {
   const [newBizClosesAt, setNewBizClosesAt] = useState("09:30 PM");
   const [newBizGst, setNewBizGst] = useState("36AAAAA0000A1Z5");
   const [newBizCoverPhoto, setNewBizCoverPhoto] = useState("https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop");
+<<<<<<< HEAD
   const [imageInputMode, setImageInputMode] = useState<"url" | "file" | "presets">("url");
   const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
   const [bizCreatedSuccess, setBizCreatedSuccess] = useState(false);
@@ -189,6 +228,28 @@ function HomeExploreContent() {
       };
       reader.readAsDataURL(file);
     }
+=======
+  const [imageInputMode, setImageInputMode] = useState<"upload" | "url">("upload");
+  const [imageFileName, setImageFileName] = useState("");
+  const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
+  const [bizCreatedSuccess, setBizCreatedSuccess] = useState(false);
+
+  // File upload handler converting to Base64
+  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Please upload an image smaller than 5MB");
+      return;
+    }
+    setImageFileName(file.name);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setNewBizCoverPhoto(base64);
+    };
+    reader.readAsDataURL(file);
+>>>>>>> feature/superadmin
   };
 
   // Auth / Login modal state (User logged in as SparkleSmart Ele... matching screenshot)
@@ -197,9 +258,11 @@ function HomeExploreContent() {
   const [loginOtp, setLoginOtp] = useState("");
   const [loginOtpSent, setLoginOtpSent] = useState(false);
   const [loginChallengeId, setLoginChallengeId] = useState("");
+  const [loginDevOtpHint, setLoginDevOtpHint] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userName, setUserName] = useState("");
 
+<<<<<<< HEAD
   // Auto-hide floating app store badges when user reaches the footer
   const [isFooterVisible, setIsFooterVisible] = useState(false);
   const footerRef = useRef<HTMLDivElement>(null);
@@ -221,24 +284,40 @@ function HomeExploreContent() {
   }, []);
 
   // Read authenticated session from localStorage
+=======
+  // Read authenticated session from localStorage and keep synced
+>>>>>>> feature/superadmin
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = localStorage.getItem("hello_access_token");
-      const savedUserStr = localStorage.getItem("hello_user");
-      if (token) {
-        setIsLoggedIn(true);
-        if (savedUserStr) {
-          try {
-            const parsed = JSON.parse(savedUserStr);
-            setUserName(parsed.fullName || "Verified User");
-          } catch {
+    const syncAuth = () => {
+      if (typeof window !== "undefined") {
+        const token = localStorage.getItem("hello_access_token");
+        const savedUserStr = localStorage.getItem("hello_user");
+        if (token) {
+          setIsLoggedIn(true);
+          if (savedUserStr) {
+            try {
+              const parsed = JSON.parse(savedUserStr);
+              setUserName(parsed.fullName || "Verified User");
+            } catch {
+              setUserName("Verified User");
+            }
+          } else {
             setUserName("Verified User");
           }
         } else {
-          setUserName("Verified User");
+          setIsLoggedIn(false);
+          setUserName("");
         }
       }
-    }
+    };
+
+    syncAuth();
+    window.addEventListener("hello_auth_changed", syncAuth);
+    window.addEventListener("storage", syncAuth);
+    return () => {
+      window.removeEventListener("hello_auth_changed", syncAuth);
+      window.removeEventListener("storage", syncAuth);
+    };
   }, []);
 
   // Active Category Data Object
@@ -279,87 +358,7 @@ function HomeExploreContent() {
         items = json.data;
       }
 
-      // If Hyderabad, prioritize Amnesia and SparkleSmart matching screenshot
-      if (selectedCity === "Hyderabad") {
-        const hyderabadHeroCards: BusinessItemCard[] = [
-          {
-            id: "biz-amnesia-skybar",
-            name: "Amnesia Sky Bar & Lakeview Rooftop Lounge",
-            slug: "amnesia-sky-bar-lakeview-rooftop-lounge",
-            description: "Continental, Pan-Asian, Cocktails & Lake View. Premium rooftop destination overlooking Durgam Cheruvu lake.",
-            coverImageUrl: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80",
-            isVerified: true,
-            isOpenNow: true,
-            averageRating: 4.8,
-            totalReviews: 980,
-            totalEnquiries: 640,
-            dealOffer: "1+1 on Craft Cocktails & Sunset Lake Seating",
-            priceForTwoOrConsultation: "₹2,200 for two",
-            primaryCategory: { id: "cat-restaurants", name: "Restaurants", slug: "restaurants" },
-            location: {
-              addressLine1: "Level 6, Inorbit Mall Road",
-              localityName: "Hitec City",
-              cityName: "Hyderabad",
-              pincode: "500081",
-              distanceKm: 0.5,
-              latitude: 17.4435,
-              longitude: 78.3772
-            },
-            contacts: {
-              callNumber: "+91 98480 99880",
-              whatsappNumber: "+91 98480 99880"
-            }
-          },
-          {
-            id: "biz-sparklesmart",
-            name: "SparkleSmart Electrical Solutions & Home Automation",
-            slug: "sparklesmart-electrical-solutions-home-automation",
-            description: "Govt. licensed residential and high-rise IT corridor wiring experts. 24/7 emergency response in Hitec City. ...",
-            coverImageUrl: "",
-            isVerified: true,
-            isOpenNow: true,
-            averageRating: 4.8,
-            totalReviews: 340,
-            totalEnquiries: 490,
-            featuredSpecialty: {
-              name: "Smart Home Touch WiFi Switch Setup ...",
-              rate: "₹499"
-            },
-            primaryCategory: { id: "cat-contractors", name: "Contractors", slug: "contractors" },
-            location: {
-              addressLine1: "Unit 402, Cyber Towers Lane",
-              localityName: "Hitec City",
-              cityName: "Hyderabad",
-              pincode: "500081",
-              distanceKm: 0.5,
-              latitude: 17.4440,
-              longitude: 78.3780
-            },
-            contacts: {
-              callNumber: "+91 98480 99881",
-              whatsappNumber: "+91 98480 99881"
-            }
-          }
-        ];
-
-        // Filter out if category doesn't match
-        const matchingDefaults = hyderabadHeroCards.filter(c => {
-          if (!selectedCategory) return true;
-          if (selectedCategory === "restaurants" && c.primaryCategory?.slug === "restaurants") return true;
-          if (selectedCategory === "contractors" && c.primaryCategory?.slug === "contractors") return true;
-          return false;
-        });
-
-        const combined = [...matchingDefaults];
-        for (const it of items) {
-          if (!combined.some(c => c.id === it.id)) {
-            combined.push(it);
-          }
-        }
-        items = combined;
-      }
-
-      if (selectedLocality && selectedCity !== "Hyderabad") {
+      if (selectedLocality) {
         items = items.filter(
           (b) => b.location?.localityName?.toLowerCase() === selectedLocality.toLowerCase()
         );
@@ -515,14 +514,17 @@ function HomeExploreContent() {
   // Handle OTP Send
   const handleSendOtp = async () => {
     try {
+      const cleaned = loginPhone.replace(/\D/g, "");
+      const fullPhone = cleaned.length === 10 ? `+91${cleaned}` : loginPhone.startsWith("+91") ? loginPhone : `+91${cleaned}`;
       const res = await fetch(`${API_BASE}/auth/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: loginPhone, purpose: "LOGIN" }),
+        body: JSON.stringify({ phoneNumber: fullPhone, purpose: "LOGIN" }),
       });
       const data = await res.json();
       if (data.success && data.data?.challengeId) {
         setLoginChallengeId(data.data.challengeId);
+        if (data.data.devOtp) setLoginDevOtpHint(data.data.devOtp);
       }
       setLoginOtpSent(true);
     } catch {
@@ -543,25 +545,33 @@ function HomeExploreContent() {
         }),
       });
       const data = await res.json();
-      if (data.success) {
-        setIsLoggedIn(true);
-        setUserName(data.data?.user?.fullName || "Verified User");
-        setIsLoginModalOpen(false);
-        setLoginOtpSent(false);
-      } else {
-        setIsLoggedIn(true);
-        setIsLoginModalOpen(false);
-        setLoginOtpSent(false);
-      }
+      const customerName = data?.data?.user?.fullName || "Valued Customer";
+      setIsLoggedIn(true);
+      setUserName(customerName);
+      setIsLoginModalOpen(false);
+      setLoginOtpSent(false);
+
+      toast.success(`Welcome back, ${customerName}! Logged in successfully.`, {
+        title: "Login Successful",
+        duration: 4500,
+      });
     } catch {
       setIsLoggedIn(true);
       setIsLoginModalOpen(false);
       setLoginOtpSent(false);
+      toast.success("Welcome back! Logged in successfully.", {
+        title: "Login Successful",
+        duration: 4500,
+      });
     }
   };
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] w-full max-w-full">
+=======
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC] overflow-x-clip w-full max-w-full">
+>>>>>>> feature/superadmin
       {/* 1. STICKY DESKTOP HEADER & CATEGORIES RIBBON */}
       <DesktopHeader
         selectedCity={selectedCity}
@@ -580,6 +590,10 @@ function HomeExploreContent() {
         onOpenLogin={() => setIsLoginModalOpen(true)}
         isLoggedIn={isLoggedIn}
         userName={userName}
+        onLogout={() => {
+          setIsLoggedIn(false);
+          setUserName("");
+        }}
         onOpenFastDeals={() => {
           const el = document.getElementById("right-deals-sidebar");
           if (el) el.scrollIntoView({ behavior: "smooth" });
@@ -591,7 +605,11 @@ function HomeExploreContent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* LEFT COLUMN: FILTERS & CATEGORIES (3 cols) - STICKY */}
+<<<<<<< HEAD
           <aside className="lg:col-span-3 lg:sticky lg:top-[116px] self-start z-20">
+=======
+          <aside className="lg:col-span-3 lg:sticky lg:top-28 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto no-scrollbar scrollbar-none z-10">
+>>>>>>> feature/superadmin
             <DesktopFilterSidebar
               selectedCity={selectedCity}
               selectedCategory={selectedCategory}
@@ -1017,7 +1035,11 @@ function HomeExploreContent() {
           </section>
 
           {/* RIGHT COLUMN: INSTANT BEST DEAL QUOTES & TRENDING (3 cols) - STICKY */}
+<<<<<<< HEAD
           <aside id="right-deals-sidebar" className="lg:col-span-3 lg:sticky lg:top-[116px] self-start z-20">
+=======
+          <aside id="right-deals-sidebar" className="lg:col-span-3 lg:sticky lg:top-28 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto no-scrollbar scrollbar-none z-10">
+>>>>>>> feature/superadmin
             <DesktopRightSidebar
               selectedCity={selectedCity}
               onSearchTopic={(topic) => setSearchQuery(topic)}
@@ -1520,6 +1542,7 @@ function HomeExploreContent() {
                     />
                   </div>
 
+<<<<<<< HEAD
                   {/* Select Image or URL Option */}
                   <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2.5">
                     <div className="flex items-center justify-between">
@@ -1547,10 +1570,38 @@ function HomeExploreContent() {
                           className={`px-2 py-0.5 rounded-md transition ${imageInputMode === "presets" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
                         >
                           ✨ Presets
+=======
+                  {/* Cover Photo / Storefront Image with File Upload OR Enter URL Option */}
+                  <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                        <ImageIcon className="w-3.5 h-3.5 text-[#0076D7]" />
+                        <span>Business Cover Photo / Storefront</span>
+                      </label>
+                      <div className="flex bg-slate-200/80 p-0.5 rounded-lg text-[10px] font-bold">
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMode("upload")}
+                          className={`px-2.5 py-1 rounded-md transition ${
+                            imageInputMode === "upload" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          Upload File
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setImageInputMode("url")}
+                          className={`px-2.5 py-1 rounded-md transition ${
+                            imageInputMode === "url" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          Enter URL
+>>>>>>> feature/superadmin
                         </button>
                       </div>
                     </div>
 
+<<<<<<< HEAD
                     {/* Mode 1: Direct Image URL */}
                     {imageInputMode === "url" && (
                       <div>
@@ -1620,6 +1671,86 @@ function HomeExploreContent() {
                         >
                           Clear
                         </button>
+=======
+                    {imageInputMode === "upload" ? (
+                      <div>
+                        <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-[#0076D7] bg-white rounded-xl p-3.5 cursor-pointer transition text-center group">
+                          <Upload className="w-5 h-5 text-slate-400 group-hover:text-[#0076D7] mb-1 transition" />
+                          <span className="text-xs font-semibold text-slate-700 group-hover:text-[#0076D7]">
+                            {imageFileName ? imageFileName : "Click to browse or drop business photo here"}
+                          </span>
+                          <span className="text-[10px] text-slate-400 mt-0.5">JPG, PNG, WebP up to 5MB</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileUpload}
+                            className="hidden"
+                          />
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5">
+                        <div className="relative">
+                          <LinkIcon className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+                          <input
+                            type="url"
+                            placeholder="https://images.unsplash.com/photo-..."
+                            value={newBizCoverPhoto.startsWith("data:") ? "" : newBizCoverPhoto}
+                            onChange={(e) => setNewBizCoverPhoto(e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0076D7]"
+                          />
+                        </div>
+                        {/* Quick Presets */}
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar scrollbar-none pt-0.5">
+                          <span className="text-[9px] text-slate-400 font-bold uppercase shrink-0">Presets:</span>
+                          {[
+                            { name: "Dining", url: "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop" },
+                            { name: "Hotel", url: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop" },
+                            { name: "Spa", url: "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800&auto=format&fit=crop" },
+                            { name: "Decor", url: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&auto=format&fit=crop" },
+                            { name: "Clinic", url: "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&auto=format&fit=crop" },
+                          ].map((preset, pIdx) => (
+                            <button
+                              key={pIdx}
+                              type="button"
+                              onClick={() => {
+                                setNewBizCoverPhoto(preset.url);
+                                setImageFileName("");
+                              }}
+                              className="text-[10px] bg-white border border-slate-200 hover:border-[#0076D7] px-2 py-0.5 rounded-md text-slate-600 hover:text-[#0076D7] transition shrink-0"
+                            >
+                              {preset.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Image Live Preview */}
+                    {newBizCoverPhoto && (
+                      <div className="relative h-28 rounded-lg overflow-hidden border border-slate-200 bg-slate-900 group">
+                        <img
+                          src={newBizCoverPhoto}
+                          alt="Storefront Preview"
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end justify-between p-2">
+                          <span className="text-[10px] font-bold text-white bg-black/50 px-2 py-0.5 rounded backdrop-blur-xs">
+                            ✓ Storefront Preview
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewBizCoverPhoto("");
+                              setImageFileName("");
+                            }}
+                            className="bg-red-500/80 hover:bg-red-600 text-white p-1 rounded transition"
+                            title="Remove Photo"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+>>>>>>> feature/superadmin
                       </div>
                     )}
                   </div>
@@ -1743,6 +1874,10 @@ function HomeExploreContent() {
                       setIsLoggedIn(true);
                       setUserName("Verified Google User");
                       setIsLoginModalOpen(false);
+                      toast.success("Welcome back! Logged in successfully via Google.", {
+                        title: "Login Successful",
+                        duration: 4500,
+                      });
                     }}
                     className="w-full bg-white hover:bg-slate-50 border border-slate-300 rounded-xl py-2.5 px-3 flex items-center justify-center gap-2.5 text-xs font-semibold text-slate-700 shadow-2xs transition"
                   >
@@ -1769,9 +1904,23 @@ function HomeExploreContent() {
                 </div>
               ) : (
                 <div>
-                  <p className="text-xs text-slate-500 mb-3">
+                  <p className="text-xs text-slate-500 mb-2">
                     Enter the 6-digit verification code sent to <span className="font-semibold text-slate-800">{loginPhone}</span>.
                   </p>
+                  {loginDevOtpHint && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-2.5 mb-3 flex items-center justify-between text-xs">
+                      <span className="text-amber-900 font-semibold text-[11px]">
+                        Test Code: <span className="font-mono font-black">{loginDevOtpHint}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setLoginOtp(loginDevOtpHint)}
+                        className="px-2 py-0.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold text-[10px] shadow-xs transition"
+                      >
+                        Auto-fill
+                      </button>
+                    </div>
+                  )}
                   <label className="block text-xs font-semibold text-slate-700 mb-1">6-Digit Code</label>
                   <input
                     type="text"
@@ -1794,6 +1943,7 @@ function HomeExploreContent() {
         </div>
       )}
 
+<<<<<<< HEAD
       {/* FLOATING APP DOWNLOAD BADGES (Auto-hides smoothly when user reaches the footer) */}
       <div 
         className={`fixed right-3 bottom-24 z-50 flex flex-col gap-2 transition-all duration-300 ease-in-out ${
@@ -1833,9 +1983,23 @@ function HomeExploreContent() {
           <div className="flex flex-col text-left leading-none">
             <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">GET APP</span>
             <span className="text-xs font-black text-white group-hover:text-emerald-400 transition">Android</span>
+=======
+      {/* FLOATING APP DOWNLOAD BADGES (Right Margin with Blinking Attention Animation & Official Store Icons) */}
+      <div className="fixed right-3 bottom-24 z-50 flex flex-col gap-2.5">
+        <a 
+          href="http://localhost:3002"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative bg-[#0B1220] hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition-all hover:scale-105 hover:border-emerald-400 flex items-center gap-2.5 select-none group animate-app-blink-android overflow-hidden"
+          title="Download Hello-Hi Android App on Google Play Store (Launch Mobile Simulator)"
+        >
+          {/* Shimmer Light Sweep */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
+            <div className="w-8 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer-sweep" />
+>>>>>>> feature/superadmin
           </div>
-        </div>
 
+<<<<<<< HEAD
         <div 
           onClick={() => showToast({
             type: "info",
@@ -1852,8 +2016,49 @@ function HomeExploreContent() {
           <div className="flex flex-col text-left leading-none">
             <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">GET APP</span>
             <span className="text-xs font-black text-white group-hover:text-blue-400 transition">iOS</span>
+=======
+          {/* Pulsing Attention Beacon */}
+          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 z-10">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-90"></span>
+            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-[#0B1220]"></span>
+          </span>
+
+          <div className="w-5 h-5 flex items-center justify-center shrink-0 relative z-10">
+            <PlayStoreIcon className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
+>>>>>>> feature/superadmin
           </div>
-        </div>
+          <div className="flex flex-col text-left leading-none relative z-10">
+            <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold group-hover:text-emerald-300">GET APP</span>
+            <span className="text-xs font-black text-white group-hover:text-emerald-400 transition-colors">Android</span>
+          </div>
+        </a>
+
+        <a 
+          href="http://localhost:3002"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="relative bg-[#0B1220] hover:bg-slate-900 text-white px-3.5 py-2.5 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition-all hover:scale-105 hover:border-sky-400 flex items-center gap-2.5 select-none group animate-app-blink-ios overflow-hidden"
+          title="Download Hello-Hi iOS App on Apple App Store (Launch Mobile Simulator)"
+        >
+          {/* Shimmer Light Sweep */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
+            <div className="w-8 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer-sweep" />
+          </div>
+
+          {/* Pulsing Attention Beacon */}
+          <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 z-10">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-90"></span>
+            <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-sky-400 border-2 border-[#0B1220]"></span>
+          </span>
+
+          <div className="w-5 h-5 flex items-center justify-center shrink-0 relative z-10">
+            <AppleLogoIcon className="w-4.5 h-4.5 text-white group-hover:scale-110 transition-transform" />
+          </div>
+          <div className="flex flex-col text-left leading-none relative z-10">
+            <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold group-hover:text-sky-200">GET APP</span>
+            <span className="text-xs font-black text-white group-hover:text-sky-300 transition-colors">iOS</span>
+          </div>
+        </a>
       </div>
 
       {/* 7. FULL FOOTER */}

@@ -41,6 +41,8 @@ const API_BASE = "http://localhost:4000/api/v1";
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState("Dashboard");
   const [activeCmsSlug, setActiveCmsSlug] = useState("terms-and-conditions");
   const [unreadNotifsCount, setUnreadNotifsCount] = useState(0);
@@ -102,7 +104,7 @@ export default function AdminDashboardPage() {
 
       // Live unread notification count
       try {
-        const notifRes = await fetch(`${API_BASE}/admin/notifications?pageSize=1`).then((r) => r.json());
+        const notifRes = await fetch(`${API_BASE}/admin/notifications?pageSize=1`).then((r) => r.json()).catch(() => null);
         if (notifRes?.success && typeof notifRes.unreadCount === "number") {
           setUnreadNotifsCount(notifRes.unreadCount);
         }
@@ -115,15 +117,32 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
+    setIsMounted(true);
     // Protected admin page guard
     if (typeof window !== "undefined") {
       const session = localStorage.getItem("hello_admin_session");
       if (!session) {
+        setIsAuthenticated(false);
         router.replace("/login");
         return;
       }
+      try {
+        const parsed = JSON.parse(session);
+        if (typeof parsed !== "object" || parsed === null) {
+          localStorage.removeItem("hello_admin_session");
+          setIsAuthenticated(false);
+          router.replace("/login");
+          return;
+        }
+      } catch {
+        localStorage.removeItem("hello_admin_session");
+        setIsAuthenticated(false);
+        router.replace("/login");
+        return;
+      }
+      setIsAuthenticated(true);
+      fetchLiveAdminData();
     }
-    fetchLiveAdminData();
   }, [router]);
 
   // Approve action: live SQL update
@@ -182,7 +201,17 @@ export default function AdminDashboardPage() {
     setRejectReason("");
   };
 
-  const pendingCount = queue.filter((i) => i.status !== "APPROVED" && i.status !== "REJECTED").length;
+  const pendingCount = (Array.isArray(queue) ? queue : []).filter((i) => i.status !== "APPROVED" && i.status !== "REJECTED").length;
+
+  if (!isMounted || isAuthenticated !== true) {
+    return (
+      <div className="h-screen max-h-screen w-full flex flex-col items-center justify-center bg-[#0B1220] text-white">
+        <div className="w-9 h-9 border-3 border-[#0076D7] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-semibold tracking-wide text-white/90">Hello Super Admin</p>
+        <p className="text-xs text-white/60 mt-1">Verifying administrative access &amp; session...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen max-h-screen w-full flex bg-[#F8FAFC] overflow-hidden">
@@ -260,7 +289,7 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2 tracking-tight" suppressHydrationWarning>
-                  {stats.totalUsers.toLocaleString("en-IN")}
+                  {(stats?.totalUsers ?? 0).toLocaleString("en-IN")}
                 </div>
               </div>
               <div className="mt-4 flex items-center justify-between">
@@ -277,16 +306,16 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
                   <span>TOTAL BUSINESSES</span>
                   <span className="flex items-center gap-0.5 text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded text-[11px] font-bold">
-                    {stats.verificationStatus.approvedPercent}% Verified
+                    {stats?.verificationStatus?.approvedPercent ?? 0}% Verified
                   </span>
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2 tracking-tight" suppressHydrationWarning>
-                  {stats.totalBusinesses.toLocaleString("en-IN")}
+                  {(stats?.totalBusinesses ?? 0).toLocaleString("en-IN")}
                 </div>
               </div>
               <div className="mt-4 flex items-center justify-between">
                 <span className="text-[11px] text-amber-600 font-semibold">
-                  {stats.pendingVerifications} pending review
+                  {stats?.pendingVerifications ?? 0} pending review
                 </span>
                 <svg className="w-20 h-6 text-amber-500" viewBox="0 0 100 30" fill="none">
                   <path d="M0 10 Q 25 25, 50 12 T 100 22" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
@@ -304,7 +333,7 @@ export default function AdminDashboardPage() {
                   </span>
                 </div>
                 <div className="text-2xl font-black text-slate-900 mt-2 tracking-tight" suppressHydrationWarning>
-                  {stats.liveEnquiries.toLocaleString("en-IN")}
+                  {(stats?.liveEnquiries ?? 0).toLocaleString("en-IN")}
                 </div>
               </div>
               <div className="mt-4 flex items-center justify-between">
@@ -436,7 +465,7 @@ export default function AdminDashboardPage() {
                     r="54"
                     stroke="#0076D7"
                     strokeWidth="18"
-                    strokeDasharray={`${Math.round((stats.verificationStatus.approvedPercent / 100) * 340)} 340`}
+                    strokeDasharray={`${Math.round(((stats?.verificationStatus?.approvedPercent ?? 0) / 100) * 340)} 340`}
                     fill="transparent"
                   />
                   {/* Circle Pending */}
@@ -446,15 +475,15 @@ export default function AdminDashboardPage() {
                     r="54"
                     stroke="#FF6B35"
                     strokeWidth="18"
-                    strokeDasharray={`${Math.round((stats.verificationStatus.pendingPercent / 100) * 340)} 340`}
-                    strokeDashoffset={`-${Math.round((stats.verificationStatus.approvedPercent / 100) * 340)}`}
+                    strokeDasharray={`${Math.round(((stats?.verificationStatus?.pendingPercent ?? 0) / 100) * 340)} 340`}
+                    strokeDashoffset={`-${Math.round(((stats?.verificationStatus?.approvedPercent ?? 0) / 100) * 340)}`}
                     fill="transparent"
                   />
                 </svg>
                 {/* Center Badge */}
                 <div className="absolute text-center">
                   <span className="text-xl font-black text-slate-900">
-                    {stats.verificationStatus.approvedPercent}%
+                    {stats?.verificationStatus?.approvedPercent ?? 0}%
                   </span>
                   <span className="block text-[10px] text-slate-400 font-bold uppercase">Verified</span>
                 </div>
@@ -466,20 +495,20 @@ export default function AdminDashboardPage() {
                   <span className="flex items-center gap-2 text-slate-600">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#0076D7]"></span> Approved
                   </span>
-                  <span className="font-bold text-slate-900">{stats.verificationStatus.approvedPercent}%</span>
+                  <span className="font-bold text-slate-900">{stats?.verificationStatus?.approvedPercent ?? 0}%</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2 text-slate-600">
                     <span className="w-2.5 h-2.5 rounded-full bg-[#FF6B35]"></span> Pending
                   </span>
-                  <span className="font-bold text-slate-900">{stats.verificationStatus.pendingPercent}%</span>
+                  <span className="font-bold text-slate-900">{stats?.verificationStatus?.pendingPercent ?? 0}%</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2 text-slate-600">
                     <span className="w-2.5 h-2.5 rounded-full bg-slate-300"></span> Other / Incomplete
                   </span>
                   <span className="font-bold text-slate-900">
-                    {Math.max(0, 100 - (stats.verificationStatus.approvedPercent + stats.verificationStatus.pendingPercent))}%
+                    {Math.max(0, 100 - ((stats?.verificationStatus?.approvedPercent ?? 0) + (stats?.verificationStatus?.pendingPercent ?? 0)))}%
                   </span>
                 </div>
               </div>
@@ -516,7 +545,7 @@ export default function AdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {queue.length === 0 ? (
+                    {(!Array.isArray(queue) || queue.length === 0) ? (
                       <tr>
                         <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
                           No businesses currently pending verification in database.
@@ -534,7 +563,7 @@ export default function AdminDashboardPage() {
                         <td className="py-3 text-slate-600">{item.city}</td>
                         <td className="py-3">
                           <div className="flex gap-1 flex-wrap">
-                            {(item.documents || ["GST Certificate"]).map((doc, dIdx) => (
+                            {(Array.isArray(item.documents) ? item.documents : ["GST Certificate"]).map((doc, dIdx) => (
                               <span key={dIdx} className="bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded text-[10px] font-semibold">
                                 {doc}
                               </span>
@@ -596,7 +625,7 @@ export default function AdminDashboardPage() {
                   RECENT SYSTEM ACTIVITIES / AUDIT LOGS
                 </h3>
                 <div className="space-y-3.5">
-                  {auditLogs.length === 0 ? (
+                  {(!Array.isArray(auditLogs) || auditLogs.length === 0) ? (
                     <div className="py-8 text-center text-slate-400 font-medium">
                       No audit activities recorded in database yet.
                     </div>
@@ -651,7 +680,7 @@ export default function AdminDashboardPage() {
               <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <span className="text-xs font-bold text-slate-700 block mb-2">Uploaded Trade Credentials</span>
                 <div className="space-y-2">
-                  {(selectedInspectionItem.documents || ["GST Certificate"]).map((doc, idx) => (
+                  {(Array.isArray(selectedInspectionItem.documents) ? selectedInspectionItem.documents : ["GST Certificate"]).map((doc, idx) => (
                     <div key={idx} className="flex items-center justify-between bg-white p-2.5 rounded-lg border border-slate-200 text-xs">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-[#0076D7]" />
