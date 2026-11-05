@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Megaphone,
+  Mail,
   Ticket,
   Building2,
   LayoutGrid,
@@ -53,14 +55,38 @@ export function AdminSidebar({
   const pathname = usePathname();
   const { logout } = useAdminProfile();
 
-  // Expandable parent states
-  const [isCategoriesExpanded, setIsCategoriesExpanded] = useState(false);
-  const [isCmsExpanded, setIsCmsExpanded] = useState(true);
-  const [isAdsExpanded, setIsAdsExpanded] = useState(true);
-  const [isPaymentsExpanded, setIsPaymentsExpanded] = useState(true);
-  const [isUsersExpanded, setIsUsersExpanded] = useState(true);
-  const [isReportsExpanded, setIsReportsExpanded] = useState(false);
-  const [isSettingsExpanded, setIsSettingsExpanded] = useState(false);
+  // Expandable parent states (Single active accordion menu)
+  type OpenMenuType = "categories" | "users" | "payments" | "cms" | "ads" | "email" | "reports" | "settings" | null;
+
+  // Derive initial active menu from current route
+  const getInitialOpenMenu = (): OpenMenuType => {
+    if (pathname?.startsWith("/email-management")) return "email";
+    if (pathname?.startsWith("/advertisements")) return "ads";
+    if (pathname?.startsWith("/cms")) return "cms";
+    if (pathname?.startsWith("/payments")) return "payments";
+    if (pathname?.startsWith("/users")) return "users";
+    if (activeTab === "Email Management") return "email";
+    if (activeTab === "Advertisement Management") return "ads";
+    if (activeTab === "CMS") return "cms";
+    if (activeTab === "Payments") return "payments";
+    if (activeTab === "Users") return "users";
+    return null;
+  };
+
+  const [openMenu, setOpenMenu] = useState<OpenMenuType>(getInitialOpenMenu());
+
+  // Auto-sync accordion when pathname changes
+  useEffect(() => {
+    if (pathname?.startsWith("/email-management")) setOpenMenu("email");
+    else if (pathname?.startsWith("/advertisements")) setOpenMenu("ads");
+    else if (pathname?.startsWith("/cms")) setOpenMenu("cms");
+    else if (pathname?.startsWith("/payments")) setOpenMenu("payments");
+    else if (pathname?.startsWith("/users")) setOpenMenu("users");
+  }, [pathname]);
+
+  const toggleMenu = (menu: OpenMenuType) => {
+    setOpenMenu((prev) => (prev === menu ? null : menu));
+  };
 
   const handleNavClick = (tabName: string, path?: string) => {
     if (onSelectTab) {
@@ -99,19 +125,16 @@ export function AdminSidebar({
   };
 
   const navItemClass = (isActive: boolean) =>
-    `w-full flex items-center ${
-      isCollapsed ? "justify-center px-2" : "justify-between px-3"
-    } py-2 rounded-[8px] text-[13.5px] font-medium transition-colors select-none ${
-      isActive
-        ? "bg-[#0076D7] text-white shadow-xs font-semibold"
-        : "text-white/80 hover:text-white hover:bg-white/10"
+    `w-full flex items-center ${isCollapsed ? "justify-center px-2" : "justify-between px-3"
+    } py-2 rounded-[8px] text-[13.5px] font-medium transition-colors select-none ${isActive
+      ? "bg-[#0076D7] text-white shadow-xs font-semibold"
+      : "text-white/80 hover:text-white hover:bg-white/10"
     }`;
 
   const sidebarContent = (
     <div
-      className={`h-screen max-h-screen flex flex-col bg-[#0B1220] text-white select-none transition-all duration-300 ${
-        isCollapsed ? "w-[76px]" : "w-[270px]"
-      }`}
+      className={`h-screen max-h-screen flex flex-col bg-[#0B1220] text-white select-none transition-all duration-300 ${isCollapsed ? "w-[76px]" : "w-[270px]"
+        }`}
       style={{ fontFamily: "'Poppins', sans-serif" }}
     >
       {/* 1. Sidebar Header with Original Hello Logo */}
@@ -179,7 +202,7 @@ export function AdminSidebar({
             type="button"
             onClick={() => {
               if (isCollapsed) onToggleCollapse();
-              setIsCategoriesExpanded(!isCategoriesExpanded);
+              toggleMenu("categories");
             }}
             className={navItemClass(isCurrentActive("Categories"))}
             title={isCollapsed ? "Categories" : undefined}
@@ -190,13 +213,12 @@ export function AdminSidebar({
             </div>
             {!isCollapsed && (
               <ChevronDown
-                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
-                  isCategoriesExpanded ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "categories" ? "rotate-180" : ""
+                  }`}
               />
             )}
           </button>
-          {!isCollapsed && isCategoriesExpanded && (
+          {!isCollapsed && openMenu === "categories" && (
             <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-1 py-1 text-[13px]">
               <div
                 onClick={() => handleNavClick("Categories")}
@@ -220,7 +242,7 @@ export function AdminSidebar({
             type="button"
             onClick={() => {
               if (isCollapsed) onToggleCollapse();
-              setIsUsersExpanded(!isUsersExpanded);
+              toggleMenu("users");
               handleNavClick("Users", "/users/customers");
             }}
             className={navItemClass(isCurrentActive("Users") || pathname?.startsWith("/users"))}
@@ -232,50 +254,46 @@ export function AdminSidebar({
             </div>
             {!isCollapsed && (
               <ChevronDown
-                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
-                  isUsersExpanded ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "users" ? "rotate-180" : ""
+                  }`}
               />
             )}
           </button>
-          {!isCollapsed && isUsersExpanded && (
+          {!isCollapsed && openMenu === "users" && (
             <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
-              <div
-                onClick={() => handleNavClick("Users", "/users/customers")}
-                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${
-                  pathname === "/users/customers"
-                    ? "text-white font-semibold bg-white/15"
-                    : "text-white/75 hover:text-white hover:bg-white/5"
-                }`}
+              <Link
+                href="/users/customers"
+                prefetch={true}
+                onClick={() => {
+                  if (onSelectTab) onSelectTab("Users");
+                  onCloseMobile();
+                }}
+                className={`py-1.5 px-2.5 rounded-md transition-colors block cursor-pointer truncate ${pathname === "/users/customers"
+                  ? "text-white font-semibold bg-white/15"
+                  : "text-white/75 hover:text-white hover:bg-white/5"
+                  }`}
               >
                 Customers
-              </div>
-              <div
-                onClick={() => handleNavClick("Users", "/users/merchants")}
-                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${
-                  pathname === "/users/merchants"
-                    ? "text-white font-semibold bg-white/15"
-                    : "text-white/75 hover:text-white hover:bg-white/5"
-                }`}
+              </Link>
+              <Link
+                href="/users/merchants"
+                prefetch={true}
+                onClick={() => {
+                  if (onSelectTab) onSelectTab("Users");
+                  onCloseMobile();
+                }}
+                className={`py-1.5 px-2.5 rounded-md transition-colors block cursor-pointer truncate ${pathname === "/users/merchants"
+                  ? "text-white font-semibold bg-white/15"
+                  : "text-white/75 hover:text-white hover:bg-white/5"
+                  }`}
               >
                 Merchants
-              </div>
+              </Link>
             </div>
           )}
         </div>
 
-        {/* 6. Suppliers */}
-        <button
-          type="button"
-          onClick={() => handleNavClick("Suppliers")}
-          className={navItemClass(isCurrentActive("Suppliers"))}
-          title={isCollapsed ? "Suppliers" : undefined}
-        >
-          <div className="flex items-center gap-3">
-            <Truck className="w-[19px] h-[19px] shrink-0" />
-            {!isCollapsed && <span>Suppliers</span>}
-          </div>
-        </button>
+
 
         {/* 7. Leads & Enquiries */}
         <button
@@ -290,18 +308,7 @@ export function AdminSidebar({
           </div>
         </button>
 
-        {/* 8. Bookings */}
-        <button
-          type="button"
-          onClick={() => handleNavClick("Bookings")}
-          className={navItemClass(isCurrentActive("Bookings"))}
-          title={isCollapsed ? "Bookings" : undefined}
-        >
-          <div className="flex items-center gap-3">
-            <Calendar className="w-[19px] h-[19px] shrink-0" />
-            {!isCollapsed && <span>Bookings</span>}
-          </div>
-        </button>
+
 
         {/* 9. Payments (Expandable Subtitles) */}
         <div>
@@ -309,8 +316,7 @@ export function AdminSidebar({
             type="button"
             onClick={() => {
               if (isCollapsed) onToggleCollapse();
-              setIsPaymentsExpanded(!isPaymentsExpanded);
-              handleNavClick("Payments", "/payments");
+              toggleMenu("payments");
             }}
             className={navItemClass(isCurrentActive("Payments"))}
             title={isCollapsed ? "Payments" : undefined}
@@ -321,32 +327,46 @@ export function AdminSidebar({
             </div>
             {!isCollapsed && (
               <ChevronDown
-                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
-                  isPaymentsExpanded ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "payments" ? "rotate-180" : ""
+                  }`}
               />
             )}
           </button>
-          {!isCollapsed && isPaymentsExpanded && (
+          {!isCollapsed && openMenu === "payments" && (
             <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
-              <div
-                onClick={() => handleNavClick("Payments", "/payments/wallet-transactions")}
-                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${pathname === "/payments/wallet-transactions" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
+              <Link
+                href="/payments/wallet-transactions"
+                prefetch={true}
+                onClick={() => {
+                  if (onSelectTab) onSelectTab("Payments");
+                  onCloseMobile();
+                }}
+                className={`py-1.5 px-2.5 rounded-md transition-colors block cursor-pointer truncate ${pathname === "/payments/wallet-transactions" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
               >
                 Wallet Transactions
-              </div>
-              <div
-                onClick={() => handleNavClick("Payments", "/payments/withdrawals")}
-                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${pathname === "/payments/withdrawals" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
+              </Link>
+              <Link
+                href="/payments/withdrawals"
+                prefetch={true}
+                onClick={() => {
+                  if (onSelectTab) onSelectTab("Payments");
+                  onCloseMobile();
+                }}
+                className={`py-1.5 px-2.5 rounded-md transition-colors block cursor-pointer truncate ${pathname === "/payments/withdrawals" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
               >
                 Withdrawals
-              </div>
-              <div
-                onClick={() => handleNavClick("Payments", "/payments/plans-purchased")}
-                className={`py-1.5 px-2.5 rounded-md transition-colors cursor-pointer truncate ${pathname === "/payments/plans-purchased" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
+              </Link>
+              <Link
+                href="/payments/plans-purchased"
+                prefetch={true}
+                onClick={() => {
+                  if (onSelectTab) onSelectTab("Payments");
+                  onCloseMobile();
+                }}
+                className={`py-1.5 px-2.5 rounded-md transition-colors block cursor-pointer truncate ${pathname === "/payments/plans-purchased" ? "text-white font-semibold bg-white/15" : "text-white/75 hover:text-white hover:bg-white/5"}`}
               >
                 Plans Purchased
-              </div>
+              </Link>
             </div>
           )}
         </div>
@@ -370,7 +390,7 @@ export function AdminSidebar({
             type="button"
             onClick={() => {
               if (isCollapsed) onToggleCollapse();
-              setIsCmsExpanded(!isCmsExpanded);
+              toggleMenu("cms");
             }}
             className={navItemClass(isCurrentActive("CMS"))}
             title={isCollapsed ? "CMS" : undefined}
@@ -381,15 +401,14 @@ export function AdminSidebar({
             </div>
             {!isCollapsed && (
               <ChevronDown
-                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
-                  isCmsExpanded ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "cms" ? "rotate-180" : ""
+                  }`}
               />
             )}
           </button>
 
           {/* CMS Submenus matching reference design */}
-          {!isCollapsed && isCmsExpanded && (
+          {!isCollapsed && openMenu === "cms" && (
             <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
               {CMS_SUBMENUS.map((sub) => {
                 const isSubActive =
@@ -397,18 +416,22 @@ export function AdminSidebar({
                   pathname === `/cms/${sub.slug}`;
 
                 return (
-                  <button
+                  <Link
                     key={sub.slug}
-                    type="button"
-                    onClick={() => handleCmsSubmenuClick(sub.slug)}
-                    className={`w-full text-left py-1.5 px-2.5 rounded-md transition-colors block truncate ${
-                      isSubActive
-                        ? "text-white font-semibold bg-white/15"
-                        : "text-white/75 hover:text-white hover:bg-white/5"
-                    }`}
+                    href={`/cms/${sub.slug}`}
+                    prefetch={true}
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab("CMS");
+                      if (onSelectCmsSlug) onSelectCmsSlug(sub.slug);
+                      onCloseMobile();
+                    }}
+                    className={`w-full text-left py-1.5 px-2.5 rounded-md transition-colors block truncate ${isSubActive
+                      ? "text-white font-semibold bg-white/15"
+                      : "text-white/75 hover:text-white hover:bg-white/5"
+                      }`}
                   >
                     {sub.title}
-                  </button>
+                  </Link>
                 );
               })}
             </div>
@@ -421,7 +444,7 @@ export function AdminSidebar({
             type="button"
             onClick={() => {
               if (isCollapsed) onToggleCollapse();
-              setIsAdsExpanded(!isAdsExpanded);
+              toggleMenu("ads");
             }}
             className={navItemClass(
               activeTab === "Advertisement Management" || pathname?.startsWith("/advertisements")
@@ -434,14 +457,13 @@ export function AdminSidebar({
             </div>
             {!isCollapsed && (
               <ChevronDown
-                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
-                  isAdsExpanded ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "ads" ? "rotate-180" : ""
+                  }`}
               />
             )}
           </button>
 
-          {!isCollapsed && isAdsExpanded && (
+          {!isCollapsed && openMenu === "ads" && (
             <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
               {[
                 { title: "Overview", path: "/advertisements/overview" },
@@ -453,22 +475,81 @@ export function AdminSidebar({
               ].map((sub) => {
                 const isSubActive = pathname === sub.path;
                 return (
-                  <button
+                  <Link
                     key={sub.path}
-                    type="button"
+                    href={sub.path}
+                    prefetch={true}
                     onClick={() => {
                       if (onSelectTab) onSelectTab("Advertisement Management");
-                      router.push(sub.path);
                       onCloseMobile();
                     }}
-                    className={`w-full text-left py-1.5 px-2.5 rounded-md transition-colors block truncate ${
-                      isSubActive
-                        ? "text-white font-semibold bg-white/15"
-                        : "text-white/75 hover:text-white hover:bg-white/5"
+                    className={`w-full text-left py-1.5 px-2.5 rounded-md transition-colors block truncate ${isSubActive
+                      ? "text-white font-semibold bg-white/15"
+                      : "text-white/75 hover:text-white hover:bg-white/5"
+                      }`}
+                  >
+                    {sub.title}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+
+        {/* 11c. Email Management (Expandable) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              if (isCollapsed) onToggleCollapse();
+              toggleMenu("email");
+            }}
+            className={navItemClass(
+              activeTab === "Email Management" || pathname?.startsWith("/email-management")
+            )}
+            title={isCollapsed ? "Email Management" : undefined}
+          >
+            <div className="flex items-center gap-3">
+              <Mail className="w-[19px] h-[19px] shrink-0 text-[#0076D7]" />
+              {!isCollapsed && <span>Email Management</span>}
+            </div>
+            {!isCollapsed && (
+              <ChevronDown
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "email" ? "rotate-180" : ""}`}
+              />
+            )}
+          </button>
+
+          {!isCollapsed && openMenu === "email" && (
+            <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
+              {[
+                { title: "Email Overview", path: "/email-management/overview" },
+                { title: "Global Email Settings", path: "/email-management/settings" },
+                { title: "Email Branding & Layouts", path: "/email-management/branding" },
+                { title: "Email Templates", path: "/email-management/templates" },
+                { title: "Automated Email Events", path: "/email-management/events" },
+                { title: "Email Campaigns", path: "/email-management/campaigns" },
+                { title: "Email Logs & Delivery", path: "/email-management/logs" },
+                { title: "Email Reports", path: "/email-management/reports" },
+              ].map((sub) => {
+                const isSubActive = pathname === sub.path;
+                return (
+                  <Link
+                    key={sub.path}
+                    href={sub.path}
+                    prefetch={true}
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab("Email Management");
+                      onCloseMobile();
+                    }}
+                    className={`w-full text-left py-1.5 px-2.5 rounded-md transition-colors block truncate ${isSubActive
+                      ? "text-white font-semibold bg-white/15"
+                      : "text-white/75 hover:text-white hover:bg-white/5"
                     }`}
                   >
                     {sub.title}
-                  </button>
+                  </Link>
                 );
               })}
             </div>
@@ -494,7 +575,7 @@ export function AdminSidebar({
             type="button"
             onClick={() => {
               if (isCollapsed) onToggleCollapse();
-              setIsReportsExpanded(!isReportsExpanded);
+              toggleMenu("reports");
             }}
             className={navItemClass(isCurrentActive("Reports"))}
             title={isCollapsed ? "Reports" : undefined}
@@ -505,13 +586,12 @@ export function AdminSidebar({
             </div>
             {!isCollapsed && (
               <ChevronDown
-                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
-                  isReportsExpanded ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "reports" ? "rotate-180" : ""
+                  }`}
               />
             )}
           </button>
-          {!isCollapsed && isReportsExpanded && (
+          {!isCollapsed && openMenu === "reports" && (
             <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-1 py-1 text-[13px]">
               <div
                 onClick={() => handleNavClick("Reports")}
@@ -535,7 +615,7 @@ export function AdminSidebar({
             type="button"
             onClick={() => {
               if (isCollapsed) onToggleCollapse();
-              setIsSettingsExpanded(!isSettingsExpanded);
+              toggleMenu("settings");
             }}
             className={navItemClass(isCurrentActive("Settings"))}
             title={isCollapsed ? "Settings" : undefined}
@@ -546,13 +626,12 @@ export function AdminSidebar({
             </div>
             {!isCollapsed && (
               <ChevronDown
-                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${
-                  isSettingsExpanded ? "rotate-180" : ""
-                }`}
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "settings" ? "rotate-180" : ""
+                  }`}
               />
             )}
           </button>
-          {!isCollapsed && isSettingsExpanded && (
+          {!isCollapsed && openMenu === "settings" && (
             <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-1 py-1 text-[13px]">
               <div
                 onClick={() => handleNavClick("Settings")}
@@ -578,9 +657,8 @@ export function AdminSidebar({
           onClick={async () => {
             await logout();
           }}
-          className={`w-full flex items-center ${
-            isCollapsed ? "justify-center px-2" : "justify-start px-3.5"
-          } py-2 rounded-lg text-xs text-white/70 hover:text-rose-400 hover:bg-white/5 transition-colors`}
+          className={`w-full flex items-center ${isCollapsed ? "justify-center px-2" : "justify-start px-3.5"
+            } py-2 rounded-lg text-xs text-white/70 hover:text-rose-400 hover:bg-white/5 transition-colors`}
           title={isCollapsed ? "Logout" : undefined}
         >
           <LogOut className="w-4 h-4 shrink-0" />
