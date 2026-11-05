@@ -10,7 +10,8 @@ import {
   XCircle, 
   Eye, 
   Edit3, 
-  Trash2, 
+  Trash2,
+  Mail, 
   RefreshCw, 
   AlertCircle
 } from "lucide-react";
@@ -69,6 +70,33 @@ export default function MerchantsPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isDeletingBulk, setIsDeletingBulk] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+
+  const handleSendKycReminder = async (item: MerchantRecord) => {
+    const recipient = item.email && item.email !== "Not Provided" ? item.email : item.phone;
+    if (!confirm(`Send an official KYC verification reminder email to "${item.business}" (${recipient})?`)) {
+      return;
+    }
+    try {
+      setSendingReminderId(item.id);
+      const res = await fetch(`${API_BASE}/admin/businesses/${item.id}/kyc-reminder`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || "KYC reminder email dispatched!");
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Failed to send reminder");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setSendingReminderId(null);
+    }
+  };
 
   // Fetch merchants from backend API
   const fetchMerchants = useCallback(async () => {
@@ -87,7 +115,20 @@ export default function MerchantsPage() {
       const json = await res.json();
 
       if (json.success) {
-        setData(json.data || []);
+        const mapped = (json.data || []).map((b: any) => ({
+          id: b.id,
+          business: b.name || "Untitled Business",
+          owner: b.owner_name && b.owner_name !== "Not Provided" ? b.owner_name : (b.legal_name || "Not Provided"),
+          phone: b.primary_phone || b.owner_phone || "Not Provided",
+          email: b.support_email || b.owner_email || "Not Provided",
+          city: b.city_name || "Andhra Pradesh",
+          category: b.category_name || "Local Services",
+          kyc: b.is_verified ? "VERIFIED" : "PENDING",
+          plan: "Growth Merchant",
+          status: b.status || "APPROVED",
+          joined: b.joined || b.created_at || new Date().toISOString(),
+        }));
+        setData(mapped);
         if (json.pagination) {
           setPagination(json.pagination);
         }
@@ -483,6 +524,14 @@ export default function MerchantsPage() {
           </div>
         )}
 
+
+        {/* Dynamic Action Toast */}
+        {feedbackToast && (
+          <div className="fixed bottom-6 right-6 z-50 bg-indigo-900 text-white px-5 py-3 rounded-2xl shadow-2xl border border-indigo-700 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <p className="text-xs font-semibold">{feedbackToast}</p>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

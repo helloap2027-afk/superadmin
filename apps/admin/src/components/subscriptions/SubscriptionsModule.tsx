@@ -10,6 +10,11 @@ import {
   Search,
   Filter,
   Eye,
+  Edit2,
+  Plus,
+  AlertTriangle,
+  Trash2,
+  CheckSquare,
   X,
   RefreshCw,
   ArrowUpDown,
@@ -85,6 +90,203 @@ export function SubscriptionsModule() {
 
   // Detail Modal
   const [selectedSub, setSelectedSub] = useState<SubscriptionItem | null>(null);
+
+  // Plan Edit / Create / Delete state
+  const [editingPlan, setEditingPlan] = useState<SubscriptionPlan | null>(null);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
+  const [deleteConfirmPlan, setDeleteConfirmPlan] = useState<SubscriptionPlan | null>(null);
+  const [isSavingPlan, setIsSavingPlan] = useState(false);
+
+  // Plan form fields
+  const [planForm, setPlanForm] = useState({
+    id: "",
+    name: "",
+    description: "",
+    price: 0,
+    currency: "INR",
+    billing_interval: "MONTHLY",
+    featuresText: "",
+    status: "ACTIVE",
+  });
+
+  const handleOpenCreatePlan = () => {
+    setEditingPlan(null);
+    setPlanForm({
+      id: "plan_" + Date.now(),
+      name: "",
+      description: "",
+      price: 999,
+      currency: "INR",
+      billing_interval: "MONTHLY",
+      featuresText: "Verified Merchant Trust Badge\n25 Instant Leads / mo\nDirect WhatsApp Enquiry Button",
+      status: "ACTIVE",
+    });
+    setIsPlanModalOpen(true);
+  };
+
+  const handleOpenEditPlan = (plan: SubscriptionPlan) => {
+    setEditingPlan(plan);
+    const featuresList = Array.isArray(plan.features) ? plan.features.join("\n") : "";
+    setPlanForm({
+      id: plan.id,
+      name: plan.name,
+      description: plan.description || "",
+      price: plan.price,
+      currency: plan.currency || "INR",
+      billing_interval: plan.billing_interval || "MONTHLY",
+      featuresText: featuresList,
+      status: plan.status || "ACTIVE",
+    });
+    setIsPlanModalOpen(true);
+  };
+
+  const handleSavePlan = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!planForm.name.trim()) {
+      alert("Plan name is required");
+      return;
+    }
+
+    const featuresArray = planForm.featuresText
+      .split("\n")
+      .map((f) => f.trim())
+      .filter((f) => f.length > 0);
+
+    const payload = {
+      name: planForm.name.trim(),
+      description: planForm.description.trim(),
+      price: Number(planForm.price) || 0,
+      currency: planForm.currency,
+      billing_interval: planForm.billing_interval,
+      features: featuresArray,
+      status: planForm.status,
+    };
+
+    try {
+      setIsSavingPlan(true);
+      const url = editingPlan
+        ? `http://localhost:4000/api/v1/admin/subscriptions/plans/${editingPlan.id}`
+        : "http://localhost:4000/api/v1/admin/subscriptions/plans";
+      const method = editingPlan ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || "Plan saved successfully!");
+        setIsPlanModalOpen(false);
+        await fetchPlans();
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Failed to save plan");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
+  const handleDeletePlan = async () => {
+    if (!deleteConfirmPlan) return;
+    try {
+      setIsSavingPlan(true);
+      const res = await fetch(
+        `http://localhost:4000/api/v1/admin/subscriptions/plans/${deleteConfirmPlan.id}`,
+        { method: "DELETE" }
+      );
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || "Plan deleted successfully!");
+        setDeleteConfirmPlan(null);
+        await fetchPlans();
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Delete plan failed");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsSavingPlan(false);
+    }
+  };
+
+  // Multi-select and Delete state
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteConfirmSub, setDeleteConfirmSub] = useState<SubscriptionItem | null>(null);
+  const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === subscriptions.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(subscriptions.map((s) => s.id));
+    }
+  };
+
+  const toggleSelectOne = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleDeleteSingle = async () => {
+    if (!deleteConfirmSub) return;
+    try {
+      setIsDeleting(true);
+      const res = await fetch(`http://localhost:4000/api/v1/admin/subscriptions/${deleteConfirmSub.id}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || "Subscription record deleted successfully!");
+        setDeleteConfirmSub(null);
+        setSelectedIds((prev) => prev.filter((id) => id !== deleteConfirmSub.id));
+        await fetchSubscriptions();
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Delete failed");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected subscription record(s)? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      setIsDeleting(true);
+      const res = await fetch("http://localhost:4000/api/v1/admin/subscriptions/bulk-delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setFeedbackToast(json.message || `${selectedIds.length} subscription records deleted!`);
+        setSelectedIds([]);
+        await fetchSubscriptions();
+        setTimeout(() => setFeedbackToast(null), 5000);
+      } else {
+        alert(json.message || "Bulk delete failed");
+      }
+    } catch (e: any) {
+      alert("Error: " + e.message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const activeRequestId = useRef(0);
 
@@ -298,10 +500,20 @@ export function SubscriptionsModule() {
       {plans.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider text-xs">
-              Merchant Tier Catalog
-            </h2>
-            <span className="text-xs text-slate-400">Fixed rate cards</span>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider text-xs">
+                Merchant Tier Catalog
+              </h2>
+              <span className="text-xs text-slate-400">Manage plan pricing, features, and active tiers</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenCreatePlan}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-[#0076D7] hover:bg-blue-700 rounded-xl transition shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create Plan</span>
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -321,9 +533,33 @@ export function SubscriptionsModule() {
                   )}
 
                   <div>
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-base font-bold text-slate-900">{p.name}</h3>
-                      <StatusBadge status={p.status} />
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-base font-bold text-slate-900">{p.name}</h3>
+                        <div className="mt-1">
+                          <StatusBadge status={p.status} />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditPlan(p)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-lg transition border border-blue-200"
+                          title="Update Plan"
+                        >
+                          <Edit2 className="w-3 h-3 text-blue-600" />
+                          <span>Update</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteConfirmPlan(p)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition border border-red-200"
+                          title="Delete Plan"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-600" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
 
                     <p className="text-xs text-slate-500 mt-1 line-clamp-2">{p.description}</p>
@@ -434,11 +670,51 @@ export function SubscriptionsModule() {
           }}
         />
       ) : (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+        <div className="space-y-3">
+          {/* Bulk Selection Action Toolbar */}
+          {selectedIds.length > 0 && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-2xl px-5 py-3 flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-indigo-600" />
+                <span className="text-xs font-bold text-indigo-900">
+                  {selectedIds.length} of {subscriptions.length} record(s) selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds([])}
+                  className="px-3 py-1.5 text-xs font-semibold text-slate-600 hover:bg-white rounded-xl transition"
+                >
+                  Deselect All
+                </button>
+                <button
+                  type="button"
+                  onClick={handleBulkDelete}
+                  disabled={isDeleting}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 rounded-xl transition shadow-xs"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  {isDeleting ? "Deleting..." : `Delete Selected (${selectedIds.length})`}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider text-[11px]">
+                  <th className="py-3.5 pl-4 pr-2 w-10 text-center">
+                    <input
+                      type="checkbox"
+                      checked={subscriptions.length > 0 && selectedIds.length === subscriptions.length}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded border-slate-300 text-[#0076D7] focus:ring-blue-500 cursor-pointer"
+                      title="Select / Deselect All Records"
+                    />
+                  </th>
                   <th className="py-3.5 px-4">Subscriber</th>
                   <th className="py-3.5 px-4">Plan</th>
                   <th
@@ -466,16 +742,28 @@ export function SubscriptionsModule() {
               </thead>
 
               <tbody className="divide-y divide-slate-100 font-normal text-slate-700">
-                {subscriptions.map((s) => (
-                  <tr
-                    key={s.id}
-                    onClick={() => setSelectedSub(s)}
-                    className="hover:bg-slate-50/70 transition cursor-pointer group"
-                  >
-                    <td className="py-3.5 px-4">
-                      <div className="font-semibold text-slate-900">{s.subscriber_name}</div>
-                      <div className="text-[11px] text-slate-400">{s.subscriber_email}</div>
-                    </td>
+                {subscriptions.map((s) => {
+                  const isChecked = selectedIds.includes(s.id);
+                  return (
+                    <tr
+                      key={s.id}
+                      onClick={() => setSelectedSub(s)}
+                      className={`hover:bg-slate-50/70 transition cursor-pointer group ${
+                        isChecked ? "bg-blue-50/40" : ""
+                      }`}
+                    >
+                      <td className="py-3.5 pl-4 pr-2 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => toggleSelectOne(s.id, e as any)}
+                          className="w-4 h-4 rounded border-slate-300 text-[#0076D7] focus:ring-blue-500 cursor-pointer"
+                        />
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="font-semibold text-slate-900">{s.subscriber_name}</div>
+                        <div className="text-[11px] text-slate-400">{s.subscriber_email}</div>
+                      </td>
 
                     <td className="py-3.5 px-4">
                       <span className="font-semibold text-slate-800">{s.plan_name}</span>
@@ -510,20 +798,34 @@ export function SubscriptionsModule() {
                     </td>
 
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedSub(s);
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-[#0076D7] hover:bg-blue-50 rounded-lg transition"
-                        title="View Details"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedSub(s);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-[#0076D7] hover:bg-blue-50 rounded-lg transition"
+                          title="View Details"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteConfirmSub(s);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          title="Delete Subscription Record"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -542,6 +844,7 @@ export function SubscriptionsModule() {
               setPage(1);
             }}
           />
+        </div>
         </div>
       )}
 

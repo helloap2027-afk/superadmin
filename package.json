@@ -5,11 +5,12 @@
   "description": "HELLO — Hyperlocal Business Discovery & Instant Enquiry Platform",
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=@hello/admin",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "typecheck": "turbo run typecheck",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "dev:all": "turbo run dev"
   },
   "devDependencies": {
     "turbo": "^2.2.3",
