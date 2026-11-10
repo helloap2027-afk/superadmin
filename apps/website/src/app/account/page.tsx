@@ -1,319 +1,5 @@
 "use client";
 
-<<<<<<< HEAD
-import React, { useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { User, Phone, Mail, Shield, LogOut, Laptop, Smartphone, Trash2, CheckCircle2, AlertCircle, ArrowLeft, Loader2, Store } from "lucide-react";
-
-export default function CustomerAccountPage() {
-  const router = useRouter();
-
-  const [user, setUser] = useState<any>(null);
-  const [sessions, setSessions] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [actionMessage, setActionMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("hello_access_token") : null;
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    // Load User Profile
-    fetch("http://localhost:4000/api/v1/auth/me", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success && json.data) {
-          setUser(json.data);
-          localStorage.setItem("hello_user", JSON.stringify(json.data));
-        } else {
-          router.replace("/login");
-        }
-      })
-      .catch(() => router.replace("/login"))
-      .finally(() => setIsLoading(false));
-
-    // Load Active Sessions
-    fetch("http://localhost:4000/api/v1/auth/sessions", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((json) => {
-        if (json.success && json.data) {
-          setSessions(json.data);
-        }
-      })
-      .catch(() => {});
-  }, [router]);
-
-  const handleRevokeSession = async (sessionId: string) => {
-    const token = localStorage.getItem("hello_access_token");
-    if (!token) return;
-
-    try {
-      const res = await fetch(`http://localhost:4000/api/v1/auth/sessions/${sessionId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const json = await res.json();
-      if (json.success) {
-        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-        setActionMessage("Session revoked successfully.");
-        setTimeout(() => setActionMessage(null), 3000);
-      }
-    } catch {}
-  };
-
-  const handleLogoutAll = async () => {
-    const token = localStorage.getItem("hello_access_token");
-    if (!token) return;
-
-    try {
-      await fetch("http://localhost:4000/api/v1/auth/logout-all", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      localStorage.clear();
-      router.replace("/login");
-    } catch {}
-  };
-
-  const handleLogout = async () => {
-    const token = localStorage.getItem("hello_access_token");
-    const refreshToken = localStorage.getItem("hello_refresh_token") || undefined;
-    if (token) {
-      try {
-        await fetch("http://localhost:4000/api/v1/auth/logout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ refreshToken }),
-        });
-      } catch {}
-    }
-    localStorage.clear();
-    router.replace("/login");
-  };
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]">
-        <div className="flex items-center gap-3 text-sm font-bold text-slate-600">
-          <Loader2 className="w-5 h-5 animate-spin text-[#0076D7]" />
-          <span>Loading Account...</span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto space-y-8">
-        
-        {/* Navigation & Header */}
-        <div className="flex items-center justify-between">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#0076D7] transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back to Discovery Home</span>
-          </Link>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold transition border border-red-200"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
-        </div>
-
-        {actionMessage && (
-          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-            <span>{actionMessage}</span>
-          </div>
-        )}
-
-        {/* User Card */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 space-y-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#0076D7] to-sky-400 flex items-center justify-center text-white font-black text-2xl shadow-md">
-                {user?.fullName?.charAt(0) || "U"}
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                    {user?.fullName || "HELLO Customer"}
-                  </h1>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold uppercase border border-emerald-200">
-                    Verified in Database
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                    {user?.phoneNumber}
-                  </span>
-                  {user?.email && (
-                    <span className="flex items-center gap-1">
-                      <Mail className="w-3.5 h-3.5 text-slate-400" />
-                      {user.email}
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0">
-              {user?.roles?.includes("VENDOR_OWNER") ? (
-                <Link
-                  href="/vendor/login"
-                  className="px-4 py-2.5 rounded-2xl bg-[#FF6B35] hover:bg-[#E5531E] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
-                >
-                  <Store className="w-4 h-4" />
-                  <span>Vendor Dashboard</span>
-                </Link>
-              ) : (
-                <Link
-                  href="/vendor/register"
-                  className="px-4 py-2.5 rounded-2xl bg-orange-50 hover:bg-orange-100 text-[#FF6B35] border border-orange-200 text-xs font-bold transition flex items-center gap-1.5"
-                >
-                  <Store className="w-4 h-4" />
-                  <span>Register a Business</span>
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* Real Database Fields Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-slate-100 text-xs">
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Database User ID</span>
-              <span className="font-mono text-slate-800 font-bold text-[11px] truncate block" title={user?.id}>{user?.id || "N/A"}</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">City & Locality</span>
-              <span className="font-bold text-slate-800 block truncate">
-                {user?.locality?.name ? `${user.locality.name}, ${user.locality.cityName}` : "Primary Pilot Region"}
-              </span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Preferred Language</span>
-              <span className="font-bold text-slate-800 block">{user?.preferredLanguage || "English"}</span>
-            </div>
-            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-0.5">Registered In DB</span>
-              <span className="font-bold text-slate-800 block">
-                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Just now"}
-              </span>
-            </div>
-          </div>
-
-          {/* Live DB SQL Record Viewer */}
-          <div className="pt-2">
-            <details className="group rounded-2xl bg-slate-900 text-slate-100 p-4 border border-slate-800 transition">
-              <summary className="text-xs font-bold font-mono text-sky-400 cursor-pointer select-none flex items-center justify-between">
-                <span>▶ View Live Relational DB Record (`users` table)</span>
-                <span className="text-[10px] text-slate-400 font-sans font-normal">Stored in SQLite / MariaDB</span>
-              </summary>
-              <pre className="mt-3 p-3 bg-slate-950 rounded-xl overflow-x-auto text-[11px] font-mono text-emerald-400 border border-slate-800 leading-relaxed">
-                {JSON.stringify(user, null, 2)}
-              </pre>
-            </details>
-          </div>
-        </div>
-
-        {/* Quick Portal Switcher Banner */}
-        <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-100 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <span className="text-blue-900 font-bold">Quick Auth Links:</span>
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-[#0076D7] hover:bg-blue-50 transition shadow-xs">
-              Show Login Page
-            </Link>
-            <Link href="/register" className="px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-[#0076D7] hover:bg-blue-50 transition shadow-xs">
-              Show Registration Page
-            </Link>
-            <Link href="/complete-profile" className="px-3 py-1.5 bg-white border border-blue-200 rounded-xl font-bold text-slate-700 hover:bg-slate-50 transition shadow-xs">
-              Edit Complete Profile
-            </Link>
-          </div>
-        </div>
-
-        {/* Active Sessions & Security */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <h2 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
-                <Shield className="w-5 h-5 text-[#0076D7]" />
-                <span>Active Login Sessions</span>
-              </h2>
-              <p className="text-xs text-slate-500">
-                Manage all authorized devices currently authenticated with your account.
-              </p>
-            </div>
-
-            {sessions.length > 1 && (
-              <button
-                onClick={handleLogoutAll}
-                className="text-xs font-bold text-red-600 hover:text-red-700 transition hover:underline"
-              >
-                Revoke All Other Devices
-              </button>
-            )}
-          </div>
-
-          <div className="divide-y divide-slate-100 border border-slate-100 rounded-2xl overflow-hidden">
-            {sessions.length === 0 ? (
-              <div className="p-6 text-center text-xs text-slate-400">
-                No active session records found.
-              </div>
-            ) : (
-              sessions.map((sess) => (
-                <div key={sess.id} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50 transition">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600">
-                      {sess.deviceInfo?.toLowerCase().includes("phone") ? (
-                        <Smartphone className="w-4 h-4" />
-                      ) : (
-                        <Laptop className="w-4 h-4" />
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-slate-800">
-                        {sess.deviceInfo || "Web Browser"}
-                      </div>
-                      <div className="text-[10px] text-slate-400">
-                        IP: {sess.ipAddress || "127.0.0.1"} • Connected: {new Date(sess.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => handleRevokeSession(sess.id)}
-                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition"
-                    title="Revoke Session"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-=======
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -321,9 +7,12 @@ import {
   User, Phone, Mail, ShieldCheck, LogOut, Building2, 
   Bell, ChevronRight, Home, Sparkles, CheckCircle2, Clock,
   LayoutDashboard, Inbox, Heart, Star, Settings, ExternalLink,
-  Edit3, Trash2, MapPin, Download, AlertTriangle, Shield, Check
+  Edit3, Trash2, MapPin, Download, AlertTriangle, Shield, Check,
+  CalendarCheck, Wrench, Wallet, Gift, Headphones, HelpCircle,
+  ArrowRight, Plus, RefreshCw
 } from "lucide-react";
 import { toast } from "@/components/Toast";
+import { DesktopHeader } from "@/components/DesktopHeader";
 import { DesktopFooter } from "@/components/DesktopFooter";
 
 function AccountContent() {
@@ -332,6 +21,71 @@ function AccountContent() {
   const activeTabParam = searchParams.get("tab") || "dashboard";
   const [activeTab, setActiveTab] = useState<string>(activeTabParam);
   const [user, setUser] = useState<any>(null);
+
+  // Dynamic user data & stats
+  const [stats, setStats] = useState({
+    totalBookings: 4,
+    walletBalance: 100,
+    referrals: 0,
+    openTickets: 0
+  });
+
+  // Dynamic Notification Preferences State
+  const [preferences, setPreferences] = useState<any[]>([]);
+  const [loadingPrefs, setLoadingPrefs] = useState(false);
+  const [savingPrefs, setSavingPrefs] = useState(false);
+
+  useEffect(() => {
+    const fetchPrefs = async () => {
+      try {
+        setLoadingPrefs(true);
+        const res = await fetch("http://localhost:4000/api/v1/notifications/preferences?role=customer");
+        const json = await res.json();
+        if (json.success && json.data?.preferences) {
+          setPreferences(json.data.preferences);
+        }
+      } catch (e) {
+        console.warn("Failed to load customer preferences:", e);
+      } finally {
+        setLoadingPrefs(false);
+      }
+    };
+    fetchPrefs();
+  }, []);
+
+  const handleTogglePref = (channel: string, category: string) => {
+    if (category === "SECURITY") return;
+    setPreferences((prev) =>
+      prev.map((p) =>
+        p.channel === channel && p.category === category ? { ...p, isEnabled: !p.isEnabled } : p
+      )
+    );
+  };
+
+  const handleSavePreferences = async () => {
+    try {
+      setSavingPrefs(true);
+      const res = await fetch("http://localhost:4000/api/v1/notifications/preferences", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user?.id || "usr_guest",
+          role: "CUSTOMER",
+          preferences,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("Notification preferences saved successfully in MySQL!", { title: "Preferences Updated" });
+      } else {
+        toast.error("Failed to save preferences", { title: "Error" });
+      }
+    } catch {
+      toast.error("Network error while saving preferences", { title: "Error" });
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
 
   // Sync tab from URL if it changes
   useEffect(() => {
@@ -348,16 +102,16 @@ function AccountContent() {
           setUser(JSON.parse(stored));
         } catch {
           setUser({
-            fullName: "Verified Member",
-            phoneNumber: "+91 98480 12345",
+            fullName: "Vinod Goexperts",
+            phoneNumber: "6302759527",
             roles: ["CUSTOMER"],
             status: "ACTIVE"
           });
         }
       } else {
         setUser({
-          fullName: "Verified Member",
-          phoneNumber: "+91 98480 12345",
+          fullName: "Vinod Goexperts",
+          phoneNumber: "6302759527",
           roles: ["CUSTOMER"],
           status: "ACTIVE"
         });
@@ -381,528 +135,619 @@ function AccountContent() {
     router.replace(`/account?tab=${tabId}`, { scroll: false });
   };
 
-  const tabs = [
-    { id: "dashboard", label: "My Dashboard", icon: LayoutDashboard },
-    { id: "profile", label: "My Profile", icon: User },
-    { id: "enquiries", label: "My Enquiries", icon: Inbox, count: 2 },
-    { id: "saved", label: "Saved Businesses", icon: Heart, count: 4 },
-    { id: "reviews", label: "My Reviews", icon: Star, count: 1 },
-    { id: "settings", label: "Account Settings", icon: Settings },
+  const sidebarNavItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "bookings", label: "My Bookings", icon: CalendarCheck },
+    { id: "amc", label: "Book AMC Services", icon: Shield },
+    { id: "profile", label: "Profile", icon: User },
+    { id: "wallet", label: "Wallet", icon: Wallet },
+    { id: "refer", label: "Refer & Earn", icon: Gift },
+    { id: "support", label: "Support Tickets", icon: Headphones },
+    { id: "delete-account", label: "Delete Account", icon: Trash2 },
   ];
 
-  return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between">
-      {/* Top Navbar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 select-none group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#0076D7] to-sky-500 text-white flex items-center justify-center font-black text-xl shadow-xs group-hover:scale-105 transition-transform">
-              H
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black tracking-tight text-slate-900 leading-none">
-                HELLO<span className="text-[#FF6B35]">-Hi</span>
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider">
-                MEMBER ACCOUNT
-              </span>
-            </div>
-          </Link>
+  const displayName = user?.fullName || "Vinod Goexperts";
+  const firstName = displayName.split(" ")[0] || "Vinod";
+  const displayPhone = user?.phoneNumber || "6302759527";
 
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="text-xs font-bold text-slate-600 hover:text-[#0076D7] flex items-center gap-1 transition"
-            >
-              <Home className="w-3.5 h-3.5" /> Back to Home
-            </Link>
-            <span className="text-slate-300">|</span>
-            <button
-              onClick={handleSignOut}
-              className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 transition"
-            >
-              <LogOut className="w-3.5 h-3.5" /> Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
+  return (
+    <div className="min-h-screen bg-[#F4F7F6] flex flex-col justify-between">
+      {/* Authoritative Homepage Header */}
+      <DesktopHeader
+        selectedCity="Hyderabad"
+        onSelectCity={() => {}}
+        selectedCategory={null}
+        onSelectCategory={() => {}}
+        searchQuery=""
+        onSearchChange={() => {}}
+        onOpenAddBusiness={() => {}}
+        onOpenLogin={() => {}}
+        isLoggedIn={true}
+        userName={displayName}
+        onLogout={handleSignOut}
+      />
 
       {/* Main Container */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex-1 w-full space-y-6">
-        {/* Breadcrumb */}
-        <div className="flex items-center gap-1 text-xs text-slate-400 font-semibold">
-          <Link href="/" className="hover:text-slate-600 transition">Home</Link>
-          <ChevronRight className="w-3 h-3" />
-          <span className="text-slate-700 font-bold">My Account</span>
-          {activeTab !== "dashboard" && (
-            <>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-[#0076D7] font-bold capitalize">{activeTab}</span>
-            </>
-          )}
-        </div>
-
-        {/* User Card */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-5 text-center md:text-left flex-col md:flex-row">
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#0076D7] to-sky-400 text-white flex items-center justify-center text-3xl font-black shadow-md shrink-0">
-              {user?.fullName?.charAt(0) || "U"}
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  {user?.fullName || "Verified User"}
-                </h1>
-                <span className="bg-emerald-50 text-emerald-700 font-bold text-[10px] px-2.5 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
-                  <ShieldCheck className="w-3 h-3 text-emerald-600" /> DPDP Verified Customer
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                {user?.phoneNumber || "+91 Mobile"} {user?.email ? `• ${user?.email}` : ""}
-              </p>
-              <div className="text-[11px] text-slate-400 font-mono">
-                Account ID: {user?.id || "usr_verified_live"} • Joined 2026
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/notifications"
-              className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-[#0076D7] rounded-xl text-xs font-bold transition flex items-center gap-1.5 border border-blue-200 shadow-2xs"
-            >
-              <Bell className="w-4 h-4" />
-              <span>Notifications Hub</span>
-            </Link>
-            <Link
-              href="/"
-              className="px-4 py-2 bg-[#0076D7] hover:bg-[#005FAE] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Explore Deals</span>
-            </Link>
-          </div>
-        </div>
-
-        {/* Tab Navigation Ribbon */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar scrollbar-none pb-1">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => handleTabChange(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition shrink-0 border ${
-                  isActive
-                    ? "bg-[#0076D7] text-white border-[#0076D7] shadow-sm"
-                    : "bg-white text-slate-600 hover:text-slate-900 border-slate-200 hover:border-slate-300 shadow-2xs"
-                }`}
-              >
-                <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-400"}`} />
-                <span>{tab.label}</span>
-                {tab.count !== undefined && (
-                  <span
-                    className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
-                    }`}
-                  >
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* TAB PANELS */}
-
-        {/* 1. DASHBOARD OVERVIEW */}
-        {activeTab === "dashboard" && (
-          <div className="space-y-6 animate-in fade-in duration-200">
-            {/* Quick Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2 shadow-2xs">
-                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Active Enquiries</span>
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-2xl font-black text-slate-900">2</h2>
-                  <span className="text-xs text-blue-600 font-bold bg-blue-50 px-2 py-0.5 rounded-full">Speed Quotes</span>
-                </div>
-                <p className="text-[11px] text-slate-500">15-min dispatches to verified local contractors</p>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2 shadow-2xs">
-                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Saved Places</span>
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-2xl font-black text-slate-900">4</h2>
-                  <span className="text-xs text-rose-600 font-bold bg-rose-50 px-2 py-0.5 rounded-full">Bookmarked</span>
-                </div>
-                <p className="text-[11px] text-slate-500">Clinics, restaurants &amp; repair services</p>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2 shadow-2xs">
-                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Reviews Written</span>
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-2xl font-black text-slate-900">1</h2>
-                  <span className="text-xs text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded-full">5.0 ★</span>
-                </div>
-                <p className="text-[11px] text-slate-500">Helped 24+ local neighbors discover quality</p>
-              </div>
-
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2 shadow-2xs">
-                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">DPDP Privacy</span>
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-xl font-black text-emerald-600 flex items-center gap-1">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600" /> Active
-                  </h2>
-                  <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full">Masked</span>
-                </div>
-                <p className="text-[11px] text-slate-500">Zero spam • Real-time number masking</p>
-              </div>
-            </div>
-
-            {/* Quick Hub Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              <div 
-                onClick={() => handleTabChange("enquiries")}
-                className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2 shadow-2xs cursor-pointer hover:border-slate-300 hover:shadow-sm transition"
-              >
-                <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#FF6B35] flex items-center justify-center font-bold">
-                  ⚡
-                </div>
-                <h3 className="text-sm font-bold text-slate-900">15-Min Fast Quotes</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Track your instant contractor, AC repair, and mover quote dispatches in real-time.
-                </p>
-              </div>
-
-              <div 
-                onClick={() => handleTabChange("saved")}
-                className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2 shadow-2xs cursor-pointer hover:border-slate-300 hover:shadow-sm transition"
-              >
-                <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0076D7] flex items-center justify-center font-bold">
-                  🏷️
-                </div>
-                <h3 className="text-sm font-bold text-slate-900">Exclusive Deals</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Access 1+1 dining passes, beauty studio discounts, and free local clinic consultations.
-                </p>
-              </div>
-
-              <div 
-                onClick={() => handleTabChange("settings")}
-                className="bg-white rounded-2xl border border-slate-200 p-5 space-y-2 shadow-2xs cursor-pointer hover:border-slate-300 hover:shadow-sm transition"
-              >
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-                  🛡️
-                </div>
-                <h3 className="text-sm font-bold text-slate-900">Privacy &amp; Security</h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  DPDP Act 2023 compliance with masked numbers, zero spam, and one-click data purge.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 2. PROFILE TAB */}
-        {activeTab === "profile" && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">Personal Information</h3>
-                <p className="text-xs text-slate-500">Manage your verified customer identity and discovery preferences.</p>
-              </div>
-              <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> OTP Verified
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Full Name</label>
-                <input
-                  type="text"
-                  readOnly
-                  value={user?.fullName || "Verified User"}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Registered Mobile Number</label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    readOnly
-                    value={user?.phoneNumber || "+91 98480 12345"}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none"
-                  />
-                  <span className="absolute right-3 top-2.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
-                    Verified
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Email Address (Optional)</label>
-                <input
-                  type="email"
-                  readOnly
-                  value={user?.email || "customer@hello-hi.in"}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">Default Discovery City</label>
-                <input
-                  type="text"
-                  readOnly
-                  value="Hyderabad (Hitec City, Gachibowli)"
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="p-4 bg-sky-50 rounded-2xl border border-sky-200 text-xs text-sky-800 flex items-start gap-3">
-              <Shield className="w-5 h-5 text-[#0076D7] shrink-0 mt-0.5" />
-              <div>
-                <span className="font-bold">DPDP Act 2023 Identity Protection:</span>
-                <p className="mt-0.5 text-sky-700">
-                  Your phone number is never exposed in plain text to merchants. All lead dispatches and calls go through secure virtual routing numbers.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 3. ENQUIRIES TAB */}
-        {activeTab === "enquiries" && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">My Enquiries &amp; Speed Quotes</h3>
-                <p className="text-xs text-slate-500">Track quotes dispatched to local merchants with 15-minute guaranteed response.</p>
-              </div>
-              <span className="text-xs font-bold text-slate-400">2 active requests</span>
-            </div>
-
-            <div className="space-y-3">
-              {/* Item 1 */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs hover:shadow-xs transition space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-orange-50 text-[#FF6B35] flex items-center justify-center font-bold">
-                      ⚡
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900">AC Deep Cleaning &amp; Gas Refill</h4>
-                      <p className="text-xs text-slate-500">Dispatched to: SparkleSmart Electricals • Hitec City</p>
-                    </div>
-                  </div>
-                  <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-emerald-200">
-                    Merchant Responded
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-                  <span>Requested 2 hours ago • Speed Quote ₹1,199</span>
-                  <button className="text-[#0076D7] font-bold hover:underline">
-                    View Merchant Chat &rarr;
-                  </button>
-                </div>
-              </div>
-
-              {/* Item 2 */}
-              <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs hover:shadow-xs transition space-y-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-[#0076D7] flex items-center justify-center font-bold">
-                      🏥
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900">Full Body Health Checkup Consultation</h4>
-                      <p className="text-xs text-slate-500">Dispatched to: Vijaya Super Specialty Hospital • Vijayawada</p>
-                    </div>
-                  </div>
-                  <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2.5 py-1 rounded-full border border-blue-200">
-                    Quote Dispatched
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100">
-                  <span>Requested Yesterday • Special HELLO Pass</span>
-                  <button className="text-[#0076D7] font-bold hover:underline">
-                    View Details &rarr;
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 4. SAVED BUSINESSES TAB */}
-        {activeTab === "saved" && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">Saved Businesses</h3>
-                <p className="text-xs text-slate-500">Your favorite local outlets, trusted doctors, and verified stores.</p>
-              </div>
-              <span className="text-xs font-bold text-slate-400">4 saved places</span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[
-                {
-                  name: "SparkleSmart Electricals",
-                  cat: "Electrical & AC Repair",
-                  city: "Hitec City, Hyderabad",
-                  rating: 4.9,
-                  reviews: 142
-                },
-                {
-                  name: "Vijaya Super Specialty Hospital",
-                  cat: "Hospitals & Diagnostics",
-                  city: "Governorpet, Vijayawada",
-                  rating: 4.8,
-                  reviews: 310
-                },
-                {
-                  name: "Royal Andhra Spice & Biryani",
-                  cat: "Restaurants & Dining",
-                  city: "Gachibowli, Hyderabad",
-                  rating: 4.7,
-                  reviews: 890
-                },
-                {
-                  name: "Amaravati Dental & Implant Care",
-                  cat: "Dentists & Clinics",
-                  city: "Brodipet, Guntur",
-                  rating: 4.9,
-                  reviews: 75
-                }
-              ].map((item, idx) => (
-                <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs hover:shadow-xs transition space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900">{item.name}</h4>
-                      <p className="text-xs text-slate-500">{item.cat} • {item.city}</p>
-                    </div>
-                    <span className="bg-amber-50 text-amber-700 text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 border border-amber-200">
-                      ★ {item.rating}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
-                    <span className="text-slate-400">{item.reviews} verified reviews</span>
-                    <Link href="/" className="text-[#0076D7] font-bold hover:underline">
-                      View Listing &rarr;
-                    </Link>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 5. REVIEWS TAB */}
-        {activeTab === "reviews" && (
-          <div className="space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-black text-slate-900">My Ratings &amp; Reviews</h3>
-                <p className="text-xs text-slate-500">Reviews you posted for local businesses across Hyderabad and Andhra Pradesh.</p>
-              </div>
-              <span className="text-xs font-bold text-slate-400">1 review</span>
-            </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="text-sm font-black text-slate-900">SparkleSmart Electricals</h4>
-                  <div className="flex items-center gap-1 text-amber-500 text-xs mt-0.5">
-                    {"★★★★★"} <span className="text-slate-400 text-[11px] ml-1">Rated 5.0 • 3 days ago</span>
-                  </div>
-                </div>
-                <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                  Verified Visit
-                </span>
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                "Outstanding technician service. Arrived in under 15 minutes as promised via HELLO-Hi fast dispatch. Fixed our split AC compressor wiring cleanly with genuine parts."
-              </p>
-              <div className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
-                24 people found this review helpful
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 6. SETTINGS TAB */}
-        {activeTab === "settings" && (
-          <div className="bg-white rounded-3xl border border-slate-200 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-200">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full">
+        <div className="flex flex-col lg:flex-row gap-6 items-start">
+          
+          {/* LEFT SIDEBAR (Matching User's Reference Exact Design) */}
+          <aside className="w-full lg:w-64 bg-white rounded-2xl border border-slate-200/80 shadow-xs p-4 shrink-0 flex flex-col justify-between min-h-[580px]">
             <div>
-              <h3 className="text-lg font-black text-slate-900">Account &amp; Privacy Settings</h3>
-              <p className="text-xs text-slate-500">Configure notifications, WhatsApp alerts, and DPDP data rights.</p>
+              {/* User Identity Header */}
+              <div className="flex items-center gap-3 px-2 py-3 mb-4 border-b border-slate-100">
+                <div className="w-12 h-12 rounded-full overflow-hidden bg-emerald-100 flex items-center justify-center text-lg font-black text-emerald-800 shrink-0 border-2 border-emerald-500 shadow-2xs">
+                  {/* Avatar graphic fallback or user first letter */}
+                  <span className="text-xl">🪔</span>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-black text-slate-900 truncate leading-tight">
+                    {displayName}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium truncate mt-0.5">
+                    {displayPhone}
+                  </p>
+                </div>
+              </div>
+
+              {/* Navigation Items */}
+              <nav className="space-y-1">
+                {sidebarNavItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  const isDashboard = item.id === "dashboard";
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => handleTabChange(item.id)}
+                      className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition select-none ${
+                        isActive
+                          ? "bg-[#06614C] text-white shadow-xs"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-slate-500"}`} />
+                        <span>{item.label}</span>
+                      </div>
+                      {isDashboard && isActive && (
+                        <ChevronRight className="w-3.5 h-3.5 text-white/80" />
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
             </div>
 
-            <div className="space-y-4 divide-y divide-slate-100">
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">SMS &amp; WhatsApp Fast Quote Alerts</h4>
-                  <p className="text-[11px] text-slate-500">Receive instant quote updates and merchant responses on mobile.</p>
-                </div>
-                <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#0076D7] rounded cursor-pointer" />
-              </div>
+            {/* Logout Action at Bottom */}
+            <div className="pt-4 border-t border-slate-100 mt-6">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-bold text-rose-600 hover:bg-rose-50 transition"
+              >
+                <LogOut className="w-4 h-4 text-rose-600" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </aside>
 
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">DPDP Mobile Number Masking</h4>
-                  <p className="text-[11px] text-slate-500">Keep personal phone number protected with virtual dispatch relay.</p>
+          {/* RIGHT CONTENT WORKSPACE */}
+          <div className="flex-1 w-full min-w-0">
+            {/* 1. DASHBOARD VIEW (Pixel Match to User's Uploaded Screenshot) */}
+            {activeTab === "dashboard" && (
+              <div className="space-y-6 animate-in fade-in duration-150">
+                {/* Greeting Banner */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs">
+                  <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+                    Welcome back, {firstName}!
+                  </h1>
+                  <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1.5">
+                    Manage your bookings, wallet, referrals, and support requests from one place.
+                  </p>
                 </div>
-                <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#0076D7] rounded cursor-pointer" />
-              </div>
 
-              <div className="flex items-center justify-between pt-3">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">Promotional Fast Deals</h4>
-                  <p className="text-[11px] text-slate-500">Receive weekend restaurant vouchers and local service discounts.</p>
-                </div>
-                <input type="checkbox" defaultChecked className="w-4 h-4 accent-[#0076D7] rounded cursor-pointer" />
-              </div>
+                {/* 4 Metric Stats Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Total Bookings */}
+                  <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      TOTAL BOOKINGS
+                    </span>
+                    <h2 className="text-3xl font-black text-[#06614C] mt-2">
+                      {stats.totalBookings}
+                    </h2>
+                  </div>
 
-              <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900">Download My Data (DPDP Act)</h4>
-                  <p className="text-[11px] text-slate-500">Request a complete JSON copy of your search and enquiry data.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => toast.success("Data export archive requested. Check your email.", { title: "Export Initiated" })}
-                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 transition flex items-center gap-1.5"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Download Archive</span>
-                </button>
-              </div>
+                  {/* Wallet Balance */}
+                  <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      WALLET BALANCE
+                    </span>
+                    <h2 className="text-3xl font-black text-[#06614C] mt-2">
+                      ₹{stats.walletBalance}
+                    </h2>
+                  </div>
 
-              <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div>
-                  <h4 className="text-xs font-bold text-red-600">Delete Account &amp; Purge Data</h4>
-                  <p className="text-[11px] text-slate-500">Permanently remove all user data according to DPDP statutory compliance.</p>
+                  {/* Referrals */}
+                  <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      REFERRALS
+                    </span>
+                    <h2 className="text-3xl font-black text-[#06614C] mt-2">
+                      {stats.referrals}
+                    </h2>
+                  </div>
+
+                  {/* Open Tickets */}
+                  <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      OPEN TICKETS
+                    </span>
+                    <h2 className="text-3xl font-black text-[#06614C] mt-2">
+                      {stats.openTickets}
+                    </h2>
+                  </div>
                 </div>
+
+                {/* 2-Column Action Grid (Matching Reference Screenshot) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 1. My Bookings */}
+                  <button
+                    onClick={() => handleTabChange("bookings")}
+                    className="w-full text-left bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold shrink-0">
+                        <CalendarCheck className="w-5 h-5 text-[#06614C]" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 group-hover:text-[#06614C] transition">
+                          My Bookings
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          Track service orders
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+
+                  {/* 2. Book AMC Services */}
+                  <button
+                    onClick={() => handleTabChange("amc")}
+                    className="w-full text-left bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold shrink-0">
+                        <Shield className="w-5 h-5 text-[#06614C]" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 group-hover:text-[#06614C] transition">
+                          Book AMC Services
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          Annual maintenance packages
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+
+                  {/* 3. Profile */}
+                  <button
+                    onClick={() => handleTabChange("profile")}
+                    className="w-full text-left bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold shrink-0">
+                        <User className="w-5 h-5 text-[#06614C]" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 group-hover:text-[#06614C] transition">
+                          Profile
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          Update your details
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+
+                  {/* 4. Wallet */}
+                  <button
+                    onClick={() => handleTabChange("wallet")}
+                    className="w-full text-left bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold shrink-0">
+                        <Wallet className="w-5 h-5 text-[#06614C]" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 group-hover:text-[#06614C] transition">
+                          Wallet
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          Balance &amp; transactions
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+
+                  {/* 5. Refer & Earn */}
+                  <button
+                    onClick={() => handleTabChange("refer")}
+                    className="w-full text-left bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold shrink-0">
+                        <Gift className="w-5 h-5 text-[#06614C]" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 group-hover:text-[#06614C] transition">
+                          Refer &amp; Earn
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          Invite friends &amp; earn
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+
+                  {/* 6. Support */}
+                  <button
+                    onClick={() => handleTabChange("support")}
+                    className="w-full text-left bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs hover:border-slate-300 hover:shadow-sm transition flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold shrink-0">
+                        <Headphones className="w-5 h-5 text-[#06614C]" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-slate-900 group-hover:text-[#06614C] transition">
+                          Support
+                        </h3>
+                        <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          Raise &amp; track tickets
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* 2. MY BOOKINGS VIEW */}
+            {activeTab === "bookings" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">My Bookings</h2>
+                    <p className="text-xs text-slate-500 mt-1">Track your active and past home service bookings</p>
+                  </div>
+                  <span className="bg-emerald-50 text-[#06614C] text-xs font-bold px-3 py-1 rounded-full border border-emerald-200">
+                    4 Total Bookings
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    { id: "BKG-9842", service: "AC Deep Cleaning & Gas Refill", vendor: "SparkleSmart Electricals", status: "COMPLETED", date: "02 Nov 2026", amount: "₹1,299" },
+                    { id: "BKG-9811", service: "Full Home Deep Sanitization", vendor: "CleanPro Services", status: "SCHEDULED", date: "10 Nov 2026", amount: "₹2,499" },
+                    { id: "BKG-9750", service: "Washing Machine Drum Repair", vendor: "QuickFix Appliances", status: "IN_PROGRESS", date: "05 Nov 2026", amount: "₹750" },
+                    { id: "BKG-9620", service: "Plumbing Leakage & Pipe Fitting", vendor: "Sri Balaji Plumbing", status: "COMPLETED", date: "28 Oct 2026", amount: "₹450" }
+                  ].map((bkg) => (
+                    <div key={bkg.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold shrink-0 mt-0.5">
+                          <CalendarCheck className="w-5 h-5 text-[#06614C]" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-black text-slate-900">{bkg.service}</h3>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-mono">
+                              {bkg.id}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500 mt-0.5 font-medium">{bkg.vendor} • {bkg.date}</p>
+                        </div>
+                      </div>
+                      <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-1 shrink-0">
+                        <span className="text-sm font-black text-slate-900">{bkg.amount}</span>
+                        <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                          bkg.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700" :
+                          bkg.status === "SCHEDULED" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
+                        }`}>
+                          {bkg.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 3. BOOK AMC SERVICES VIEW */}
+            {activeTab === "amc" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">Book AMC Services</h2>
+                    <p className="text-xs text-slate-500 mt-1">Annual Maintenance Contracts with zero breakdown guarantee</p>
+                  </div>
+                  <span className="bg-emerald-50 text-[#06614C] text-xs font-bold px-3 py-1 rounded-full border border-emerald-200">
+                    HELLO Assured
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { title: "Home AC Annual Plan", price: "₹2,499/yr", visits: "3 Services/year", features: ["Gas top-up discount", "Free emergency visit", "Certified technicians"] },
+                    { title: "Complete Appliance Care", price: "₹4,999/yr", visits: "Covers 4 appliances", features: ["Fridge, AC, Washing Machine", "Free parts up to ₹1,500", "Priority dispatch"] },
+                    { title: "Electrical & Plumbing AMC", price: "₹1,999/yr", visits: "Unlimited calls", features: ["Zero service visit fee", "Emergency 30-min response", "Standard warranty"] }
+                  ].map((amc, idx) => (
+                    <div key={idx} className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col justify-between space-y-4">
+                      <div>
+                        <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold mb-3">
+                          <Shield className="w-5 h-5 text-[#06614C]" />
+                        </div>
+                        <h3 className="text-sm font-black text-slate-900">{amc.title}</h3>
+                        <p className="text-xl font-black text-[#06614C] mt-1">{amc.price}</p>
+                        <p className="text-xs text-slate-500 font-bold mt-0.5">{amc.visits}</p>
+                        <ul className="mt-3 space-y-1.5 text-xs text-slate-600">
+                          {amc.features.map((f, i) => (
+                            <li key={i} className="flex items-center gap-1.5">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>{f}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => toast.success(`Enquiry dispatched for ${amc.title}! Our team will contact you.`, { title: "AMC Request Sent" })}
+                        className="w-full py-2.5 bg-[#06614C] hover:bg-[#054d3c] text-white text-xs font-bold rounded-xl transition"
+                      >
+                        Book Package Now
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 4. PROFILE VIEW */}
+            {activeTab === "profile" && (
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">Profile Details</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Manage your personal information and verified identity</p>
+                  </div>
+                  <span className="bg-emerald-50 text-emerald-700 text-xs font-bold px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Verified Member
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Full Name</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={displayName}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Mobile Number</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly
+                        value={displayPhone}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none"
+                      />
+                      <span className="absolute right-3 top-2.5 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md">
+                        Verified
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Email Address</label>
+                    <input
+                      type="email"
+                      readOnly
+                      value={user?.email || "vinod@goexperts.in"}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-slate-700">Default City</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value="Hyderabad (Hitec City)"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-800 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-emerald-50/50 rounded-xl border border-emerald-200/80 text-xs text-emerald-800 flex items-start gap-3">
+                  <ShieldCheck className="w-5 h-5 text-[#06614C] shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">DPDP Act 2023 Identity Protection:</span>
+                    <p className="mt-0.5 text-emerald-700">
+                      Your phone number is protected with encrypted tokenization. Service providers contact you securely without exposing your personal information.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 5. WALLET VIEW */}
+            {activeTab === "wallet" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">AVAILABLE BALANCE</span>
+                    <h2 className="text-3xl font-black text-[#06614C] mt-1">₹{stats.walletBalance}</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Use balance for instant bookings and platform discounts</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => toast.success("Added ₹500 to wallet test sandbox!", { title: "Wallet Recharged" })}
+                      className="px-4 py-2 bg-[#06614C] hover:bg-[#054d3c] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Add Money</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Transactions */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                  <h3 className="text-sm font-black text-slate-900">Recent Transactions</h3>
+                  <div className="space-y-3">
+                    {[
+                      { desc: "Welcome Bonus Signup Reward", date: "07 Nov 2026", amount: "+₹100", type: "credit" },
+                      { desc: "Cashback - AC Cleaning Booking", date: "02 Nov 2026", amount: "+₹50", type: "credit" },
+                      { desc: "Discount Redeemed on Booking", date: "02 Nov 2026", amount: "-₹50", type: "debit" }
+                    ].map((tx, i) => (
+                      <div key={i} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0 text-xs">
+                        <div>
+                          <p className="font-bold text-slate-900">{tx.desc}</p>
+                          <p className="text-[11px] text-slate-400 mt-0.5">{tx.date}</p>
+                        </div>
+                        <span className={`font-black ${tx.type === "credit" ? "text-emerald-600" : "text-slate-800"}`}>
+                          {tx.amount}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 6. REFER & EARN VIEW */}
+            {activeTab === "refer" && (
+              <div className="bg-white rounded-2xl border border-slate-200/80 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-150">
+                <div className="max-w-xl">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-[#06614C] flex items-center justify-center font-bold mb-4">
+                    <Gift className="w-6 h-6 text-[#06614C]" />
+                  </div>
+                  <h2 className="text-2xl font-black text-slate-900">Refer Friends &amp; Earn ₹100</h2>
+                  <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+                    Share your unique referral link with neighbors, family, and colleagues. You both get ₹100 wallet credit on their first verified booking!
+                  </p>
+                </div>
+
+                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 max-w-lg">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">YOUR REFERRAL CODE</span>
+                    <p className="text-base font-black text-slate-900 font-mono tracking-wider mt-0.5">HELLO-VINOD-98</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (typeof navigator !== "undefined" && navigator.clipboard) {
+                        navigator.clipboard.writeText("HELLO-VINOD-98");
+                      }
+                      toast.success("Referral code copied to clipboard!", { title: "Copied" });
+                    }}
+                    className="px-4 py-2 bg-[#06614C] hover:bg-[#054d3c] text-white rounded-xl text-xs font-bold transition shrink-0"
+                  >
+                    Copy Link
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-100 text-center">
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-2xl font-black text-[#06614C]">0</span>
+                    <p className="text-xs text-slate-500 font-bold mt-1">Friends Invited</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-2xl font-black text-[#06614C]">0</span>
+                    <p className="text-xs text-slate-500 font-bold mt-1">Completed Bookings</p>
+                  </div>
+                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                    <span className="text-2xl font-black text-[#06614C]">₹0</span>
+                    <p className="text-xs text-slate-500 font-bold mt-1">Total Rewards Earned</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 7. SUPPORT TICKETS VIEW */}
+            {activeTab === "support" && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-black text-slate-900">Support Tickets</h2>
+                    <p className="text-xs text-slate-500 mt-1">Raise support inquiries and track dispute resolutions</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toast.success("Support ticket request initiated. Support team will respond shortly.", { title: "Ticket Created" })}
+                    className="px-4 py-2 bg-[#06614C] hover:bg-[#054d3c] text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Ticket</span>
+                  </button>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-12 text-center shadow-xs">
+                  <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-[#06614C] flex items-center justify-center mx-auto font-bold mb-3">
+                    <CheckCircle2 className="w-7 h-7 text-[#06614C]" />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900">No Open Support Tickets</h3>
+                  <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                    All your previous bookings and service requests are running smoothly. If you need any assistance, click Create Ticket above.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* 8. DELETE ACCOUNT VIEW */}
+            {activeTab === "delete-account" && (
+              <div className="bg-white rounded-2xl border border-rose-200 p-6 sm:p-8 shadow-xs space-y-6 animate-in fade-in duration-150">
+                <div>
+                  <h2 className="text-xl font-black text-rose-600">Delete Account &amp; Purge Data</h2>
+                  <p className="text-xs text-slate-500 mt-1">
+                    According to the Digital Personal Data Protection (DPDP) Act 2023, you have the right to erase your identity.
+                  </p>
+                </div>
+
+                <div className="p-4 bg-rose-50 rounded-xl border border-rose-100 text-xs text-rose-800 space-y-2">
+                  <p className="font-bold">Warning: This action is permanent and cannot be undone.</p>
+                  <p className="text-rose-700 leading-relaxed">
+                    Deleting your account will remove your profile details, booking history, wallet credits, and referral bonuses.
+                  </p>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => toast.error("Please contact privacy@hello-hi.in for DPDP identity purge verification.", { title: "Account Deletion" })}
-                  className="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-xs font-bold hover:bg-red-50 transition flex items-center gap-1.5"
+                  className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-xs"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Delete Account</span>
+                  <Trash2 className="w-4 h-4" />
+                  <span>Confirm Account Deletion</span>
                 </button>
               </div>
-            </div>
-          </div>
-        )}
+            )}
 
+          </div>
+
+        </div>
       </main>
 
       <DesktopFooter />
@@ -912,9 +757,8 @@ function AccountContent() {
 
 export default function AccountPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center text-xs font-bold text-slate-400">Loading Account...</div>}>
+    <Suspense fallback={<div className="min-h-screen bg-[#F4F7F6] flex items-center justify-center text-xs font-bold text-slate-400">Loading Account...</div>}>
       <AccountContent />
     </Suspense>
   );
 }
->>>>>>> feature/superadmin

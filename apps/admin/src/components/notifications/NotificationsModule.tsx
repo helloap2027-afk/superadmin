@@ -16,7 +16,12 @@ import {
   Filter,
   Check,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Send,
+  RotateCw,
+  Smartphone,
+  Mail,
+  MessageSquare
 } from "lucide-react";
 import { SearchInput } from "@/components/shared/SearchInput";
 import { EmptyState } from "@/components/shared/StateComponents";
@@ -42,6 +47,9 @@ interface NotificationsModuleProps {
 
 export function NotificationsModule({ onUnreadCountChange }: NotificationsModuleProps) {
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"audit_feed" | "delivery_queue">("audit_feed");
+
+  // TAB 1: In-App Database Notifications Feed
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +65,65 @@ export function NotificationsModule({ onUnreadCountChange }: NotificationsModule
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // TAB 2: Multi-Channel Outbox Delivery Queue (Milestone 6)
+  const [outboxItems, setOutboxItems] = useState<any[]>([]);
+  const [loadingOutbox, setLoadingOutbox] = useState(false);
+  const [outboxPage, setOutboxPage] = useState(1);
+  const [outboxTotalPages, setOutboxTotalPages] = useState(1);
+  const [outboxTotalRecords, setOutboxTotalRecords] = useState(0);
+  const [outboxStatusFilter, setOutboxStatusFilter] = useState("ALL");
+  const [outboxChannelFilter, setOutboxChannelFilter] = useState("ALL");
+  const [outboxStats, setOutboxStats] = useState({ queued: 0, sent: 0, delivered: 0, failed: 0, retrying: 0, total: 0 });
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  const fetchOutbox = useCallback(async () => {
+    try {
+      setLoadingOutbox(true);
+      const params = new URLSearchParams({
+        page: outboxPage.toString(),
+        pageSize: "15",
+      });
+      if (outboxStatusFilter !== "ALL") params.append("status", outboxStatusFilter);
+      if (outboxChannelFilter !== "ALL") params.append("channel", outboxChannelFilter);
+
+      const res = await fetch(`http://localhost:4000/api/v1/notifications/outbox?${params.toString()}`);
+      const json = await res.json();
+      if (json.success) {
+        setOutboxItems(json.data || []);
+        if (json.pagination) {
+          setOutboxTotalPages(json.pagination.totalPages || 1);
+          setOutboxTotalRecords(json.pagination.totalRecords || 0);
+        }
+        if (json.stats) {
+          setOutboxStats(json.stats);
+        }
+      }
+    } catch (e) {
+      console.warn("Outbox fetch warning:", e);
+    } finally {
+      setLoadingOutbox(false);
+    }
+  }, [outboxPage, outboxStatusFilter, outboxChannelFilter]);
+
+  useEffect(() => {
+    if (activeTab === "delivery_queue") {
+      fetchOutbox();
+    }
+  }, [activeTab, fetchOutbox]);
+
+  const handleRetryOutboxItem = async (id: string) => {
+    try {
+      setRetryingId(id);
+      const res = await fetch(`http://localhost:4000/api/v1/notifications/outbox/${id}/retry`, { method: "POST" });
+      const json = await res.json();
+      if (json.success) {
+        fetchOutbox();
+      }
+    } catch {} finally {
+      setRetryingId(null);
+    }
+  };
 
   // Selection state for dynamic delete
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -281,7 +348,187 @@ export function NotificationsModule({ onUnreadCountChange }: NotificationsModule
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      {/* 1. Header with Stats & Actions */}
+      {/* Tab Switcher: Audit Feed vs Multi-Channel Delivery Outbox */}
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-3">
+        <button
+          onClick={() => setActiveTab("audit_feed")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            activeTab === "audit_feed"
+              ? "bg-[#0076D7] text-white shadow-xs"
+              : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
+          }`}
+        >
+          <Bell className="w-3.5 h-3.5" />
+          <span>Database In-App Audit Feed</span>
+          {unreadCount > 0 && (
+            <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded-full font-black text-white">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab("delivery_queue")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+            activeTab === "delivery_queue"
+              ? "bg-[#FF6B35] text-white shadow-xs"
+              : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
+          }`}
+        >
+          <Send className="w-3.5 h-3.5" />
+          <span>Multi-Channel Outbox &amp; Delivery Queue</span>
+          {outboxStats.retrying + outboxStats.failed > 0 && (
+            <span className="text-[10px] bg-red-500 px-1.5 py-0.2 rounded-full font-black text-white">
+              {outboxStats.retrying + outboxStats.failed}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === "delivery_queue" ? (
+        /* ================= TAB 2: MULTI-CHANNEL DELIVERY OUTBOX ================= */
+        <div className="space-y-6">
+          {/* KPI Summary Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase text-slate-400">Total Enqueued</span>
+              <div className="text-2xl font-black text-slate-900 mt-1">{outboxStats.total}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Durable message lifecycle</div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase text-amber-500">Queued</span>
+              <div className="text-2xl font-black text-amber-600 mt-1">{outboxStats.queued}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Awaiting worker pick-up</div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase text-blue-500">Sent (Simulated)</span>
+              <div className="text-2xl font-black text-[#0076D7] mt-1">{outboxStats.sent}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Dispatched to channel gateway</div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase text-emerald-500">Delivered</span>
+              <div className="text-2xl font-black text-emerald-600 mt-1">{outboxStats.delivered}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Confirmed by recipient app/gateway</div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
+              <span className="text-[10px] font-bold uppercase text-rose-500">Failed / Retrying</span>
+              <div className="text-2xl font-black text-rose-600 mt-1">{outboxStats.failed + outboxStats.retrying}</div>
+              <div className="text-[10px] text-slate-500 mt-0.5">Exponential backoff active</div>
+            </div>
+          </div>
+
+          {/* Outbox Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xs overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Live Delivery Queue</h3>
+                <p className="text-[11px] text-slate-500">Real-time outbox tracking across In-App, SMS, WhatsApp, Email, and Push.</p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={fetchOutbox}
+                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${loadingOutbox ? "animate-spin" : ""}`} />
+                  <span>Refresh Queue</span>
+                </button>
+              </div>
+            </div>
+
+            {loadingOutbox ? (
+              <div className="py-12 text-center text-xs text-slate-400">Loading delivery records from MySQL...</div>
+            ) : outboxItems.length === 0 ? (
+              <div className="py-12 text-center text-xs text-slate-400 space-y-2">
+                <Send className="w-8 h-8 text-slate-300 mx-auto" />
+                <p className="font-bold text-slate-600">No outbox dispatches recorded yet.</p>
+                <p className="text-[11px] text-slate-400">Incoming buyer leads, quote dispatches, and KYC actions will populate here automatically.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 border-b border-slate-100 font-bold text-slate-500">
+                    <tr>
+                      <th className="py-3 px-4">Event &amp; Message</th>
+                      <th className="py-3 px-4">Channel</th>
+                      <th className="py-3 px-4">Recipient</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4">Provider Ref</th>
+                      <th className="py-3 px-4">Retries</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {outboxItems.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/60 transition">
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-slate-900">{item.title}</div>
+                          <div className="text-[11px] text-slate-500 truncate max-w-xs">{item.message}</div>
+                          <div className="text-[10px] text-slate-400 font-mono mt-0.5">{item.idempotency_key}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            item.channel === "IN_APP"
+                              ? "bg-blue-100 text-[#0076D7]"
+                              : item.channel === "WHATSAPP"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : item.channel === "SMS"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-purple-100 text-purple-700"
+                          }`}>
+                            {item.channel}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-900">{item.recipient_role}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">{item.recipient_phone || item.recipient_id || "All"}</div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                            item.status === "DELIVERED"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : item.status === "SENT"
+                              ? "bg-blue-100 text-blue-700"
+                              : item.status === "FAILED"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-mono text-[10px] text-slate-500">
+                          {item.provider_ref || item.provider || "—"}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-700">
+                          {item.retry_count} / {item.max_retries}
+                        </td>
+                        <td className="py-3 px-4 text-right">
+                          {(item.status === "FAILED" || item.status === "RETRYING") && (
+                            <button
+                              onClick={() => handleRetryOutboxItem(item.id)}
+                              disabled={retryingId === item.id}
+                              className="px-2.5 py-1 bg-blue-50 text-[#0076D7] hover:bg-blue-100 rounded-lg text-[10px] font-bold transition inline-flex items-center gap-1 disabled:opacity-50"
+                            >
+                              <RotateCw className={`w-3 h-3 ${retryingId === item.id ? "animate-spin" : ""}`} />
+                              Retry Now
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* ================= TAB 1: DATABASE NOTIFICATIONS FEED ================= */
+        <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-2xs">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
@@ -601,6 +848,8 @@ export function NotificationsModule({ onUnreadCountChange }: NotificationsModule
               />
             </div>
           )}
+        </div>
+      )}
         </div>
       )}
     </div>

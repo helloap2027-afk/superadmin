@@ -2,47 +2,22 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import Link from "next/link";
-import { ShieldCheck, ChevronRight, Home, HelpCircle, FileText, Phone, Info } from "lucide-react";
-import { WebsiteHeaderWrapper } from "@/components/WebsiteHeaderWrapper";
+import { ShieldCheck, ChevronRight, Home, HelpCircle } from "lucide-react";
 import { DesktopFooter } from "@/components/DesktopFooter";
-import { ContactForm } from "@/components/ContactForm";
 
 const CMS_ALLOWED_SLUGS = [
-  "terms",
   "terms-and-conditions",
-  "privacy",
   "privacy-policy",
-  "faq",
   "faqs",
-  "about",
   "about-us",
-  "refund",
   "refund-cancellation-policy",
-  "contact",
-  "contact-us",
-  "contact-support",
-  "cookie-policy",
-  "community-guidelines"
+  "contact-support"
 ];
-
-function resolveSlug(slug: string): string {
-  const map: Record<string, string> = {
-    contact: "contact-support",
-    "contact-us": "contact-support",
-    terms: "terms-and-conditions",
-    faq: "faqs",
-    about: "about-us",
-    privacy: "privacy-policy",
-    refund: "refund-cancellation-policy",
-  };
-  return map[slug.toLowerCase()] || slug;
-}
 
 async function getCMSPage(slug: string) {
   try {
-    const canonical = resolveSlug(slug);
-    const res = await fetch(`http://localhost:4000/api/v1/cms/public/${canonical}?lang=en`, {
-      next: { revalidate: 30 }
+    const res = await fetch(`http://localhost:4000/api/v1/cms/public/${slug}?lang=en`, {
+      next: { revalidate: 60 }
     });
     if (!res.ok) return null;
     const json = await res.json();
@@ -53,11 +28,10 @@ async function getCMSPage(slug: string) {
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const target = resolveSlug(params.slug);
-  if (!CMS_ALLOWED_SLUGS.includes(params.slug) && !CMS_ALLOWED_SLUGS.includes(target)) {
+  if (!CMS_ALLOWED_SLUGS.includes(params.slug)) {
     return { title: "Page Not Found | Hello-Hi" };
   }
-  const page = await getCMSPage(target);
+  const page = await getCMSPage(params.slug);
   if (!page) {
     return {
       title: `${params.slug.replace(/-/g, " ")} | Hello-Hi`,
@@ -72,22 +46,40 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function PublicCMSPage({ params }: { params: { slug: string } }) {
-  const canonical = resolveSlug(params.slug);
-  if (!CMS_ALLOWED_SLUGS.includes(params.slug) && !CMS_ALLOWED_SLUGS.includes(canonical)) {
+  if (!CMS_ALLOWED_SLUGS.includes(params.slug)) {
     notFound();
   }
 
-  const page = await getCMSPage(canonical);
-  const isContactPage = canonical === "contact-support";
+  const page = await getCMSPage(params.slug);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between">
-      {/* Official Sticky Desktop Header & Categories Ribbon */}
-      <WebsiteHeaderWrapper />
+      {/* Minimal Top Brand Bar */}
+      <header className="bg-[#0B1220] border-b border-slate-800 py-3.5 px-4 sm:px-6 sticky top-0 z-30 shadow-md">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-1 font-black text-xl tracking-tight">
+            <span className="text-[#0076D7]">HE</span>
+            <span className="text-[#FF6B35]">LLO</span>
+            <span className="text-white text-xs font-semibold ml-2 pl-2 border-l border-slate-700 hidden sm:inline">
+              Hyperlocal Discovery
+            </span>
+          </Link>
+          <div className="flex items-center gap-4 text-xs">
+            <Link href="/explore" className="text-slate-300 hover:text-white font-medium transition">
+              Explore Andhra Pradesh
+            </Link>
+            <Link
+              href="/"
+              className="bg-[#0076D7] hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded-lg transition"
+            >
+              Back to Search
+            </Link>
+          </div>
+        </div>
+      </header>
 
       {/* Main Content Article */}
-      <main className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 flex-1 space-y-6">
-
+      <main className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-10 flex-1 space-y-6">
         {/* Breadcrumb */}
         <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
           <Link href="/" className="hover:text-slate-800 flex items-center gap-1">
@@ -95,7 +87,7 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
             <span>Home</span>
           </Link>
           <ChevronRight className="w-3 h-3 text-slate-400" />
-          <span>Policies & Information</span>
+          <span>Policies &amp; Legal</span>
           <ChevronRight className="w-3 h-3 text-slate-400" />
           <span className="text-slate-900 font-bold">
             {page?.title || params.slug.replace(/-/g, " ")}
@@ -107,7 +99,7 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
           <div className="border-b border-slate-100 pb-6 space-y-2">
             <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Official Database Record • hello_db</span>
+              <span>Official Public Documentation</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               {page?.title || params.slug.replace(/-/g, " ")}
@@ -118,7 +110,7 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
               </p>
             )}
             <div className="text-[11px] text-slate-400 pt-1">
-              <span>Last updated: {page?.updatedAt ? new Date(page.updatedAt).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" }) : "October 2026"}</span>
+              <span>Last updated: {page?.updatedAt ? new Date(page.updatedAt).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" }) : "October 2024"}</span>
             </div>
           </div>
 
@@ -127,7 +119,7 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
             <div className="space-y-4 pt-2">
               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
                 <HelpCircle className="w-4 h-4 text-[#0076D7]" />
-                <span>Frequently Asked Questions ({page.faqItems.length})</span>
+                <span>Frequently Asked Questions</span>
               </h2>
               <div className="space-y-3">
                 {page.faqItems.map((item: any, idx: number) => (
@@ -146,14 +138,11 @@ export default async function PublicCMSPage({ params }: { params: { slug: string
 
           {/* Article HTML Body */}
           <article
-            className="prose prose-slate max-w-none text-xs sm:text-sm leading-relaxed text-slate-800 space-y-3"
+            className="prose prose-slate max-w-none text-xs sm:text-sm leading-relaxed text-slate-800"
             dangerouslySetInnerHTML={{
               __html: page?.content || "<p>Please visit the Super Admin console to publish content for this section.</p>"
             }}
           />
-
-          {/* If Contact Page, render Interactive Contact Form */}
-          {isContactPage && <ContactForm />}
         </div>
       </main>
 

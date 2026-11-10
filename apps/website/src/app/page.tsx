@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { DesktopHeader } from "@/components/DesktopHeader";
 import { DesktopFilterSidebar } from "@/components/DesktopFilterSidebar";
@@ -9,109 +9,16 @@ import { DesktopRightSidebar } from "@/components/DesktopRightSidebar";
 import { DesktopFooter } from "@/components/DesktopFooter";
 import { toast } from "@/components/Toast";
 import { AP_EXPLORE_CATEGORIES, CuratedCollection } from "@/data/exploreData";
-import { useToast } from "@/components/ToastProvider";
 import { 
   Send, X, CheckCircle, Clock, MapPin, Phone, MessageSquare, 
   Sparkles, Loader2, Star, ShieldCheck, Plus, Building2, 
   Map as MapIcon, LayoutGrid, Tag, Calendar, DollarSign, 
   Navigation, Plane, Car, Train, FileText, CheckCircle2, ChevronRight, Share2, Heart, Zap,
-<<<<<<< HEAD
-  Camera, Upload, Image as ImageIcon
-=======
   Upload, Image as ImageIcon, Link as LinkIcon, Trash2
->>>>>>> feature/superadmin
 } from "lucide-react";
 
 const API_BASE = "http://localhost:4000/api/v1";
 
-<<<<<<< HEAD
-const CATEGORY_PRESET_IMAGES: Record<string, string[]> = {
-  restaurants: [
-    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=800&auto=format&fit=crop&q=80"
-  ],
-  hotels: [
-    "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&auto=format&fit=crop&q=80"
-  ],
-  "beauty-spa": [
-    "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1519415510236-718bdfcd89c8?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&auto=format&fit=crop&q=80"
-  ],
-  "home-decor": [
-    "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1616486338812-3dadae4b4ace?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80"
-  ],
-  "ask-astro": [
-    "https://images.unsplash.com/photo-1532012197267-da84d127e765?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1514533450685-4493e01d1fdc?w=800&auto=format&fit=crop&q=80"
-  ],
-  "wedding-planning": [
-    "https://images.unsplash.com/photo-1519741497674-611481863552?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=800&auto=format&fit=crop&q=80"
-  ],
-  education: [
-    "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1580582932707-520aed937b7b?w=800&auto=format&fit=crop&q=80"
-  ],
-  "rent-hire": [
-    "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&auto=format&fit=crop&q=80"
-  ],
-  hospitals: [
-    "https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=800&auto=format&fit=crop&q=80"
-  ],
-  contractors: [
-    "https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800&auto=format&fit=crop&q=80"
-  ],
-  "pet-shops": [
-    "https://images.unsplash.com/photo-1548767797-d8c844163c4c?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=800&auto=format&fit=crop&q=80"
-  ],
-  "pg-hostels": [
-    "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1595526114035-0d45ed16cfbf?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=800&auto=format&fit=crop&q=80"
-  ],
-  "estate-agent": [
-    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80"
-  ],
-  dentists: [
-    "https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1606811841689-23dfddce3e95?w=800&auto=format&fit=crop&q=80",
-    "https://images.unsplash.com/photo-1598256989800-fe5f95da9787?w=800&auto=format&fit=crop&q=80"
-  ],
-};
-=======
 function PlayStoreIcon({ className = "w-5 h-5" }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -142,30 +49,35 @@ function AppleLogoIcon({ className = "w-5 h-5" }: { className?: string }) {
     </svg>
   );
 }
->>>>>>> feature/superadmin
 
 function HomeExploreContent() {
-  const { showToast } = useToast();
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get("category");
   const initialCityParam = searchParams.get("city")?.toLowerCase();
   const initialCity: "Hyderabad" | "Vijayawada" | "Guntur" = 
     initialCityParam === "guntur" ? "Guntur" : initialCityParam === "vijayawada" ? "Vijayawada" : "Hyderabad";
   const initialQuery = searchParams.get("q") || "";
+  const initialLocality = searchParams.get("locality") || "Hitec City";
+  const initialVerifiedOnly = searchParams.get("verifiedOnly") === "true";
+  const initialOpenNow = searchParams.get("openNow") === "true";
+  const initialDealsOnly = searchParams.get("hasOffers") === "true" || searchParams.get("dealsOnly") === "true";
+  const initialMinRating = searchParams.get("minRating") ? parseFloat(searchParams.get("minRating")!) : null;
+  const initialSort = (searchParams.get("sort") || searchParams.get("sortBy") || "popular") as "popular" | "rating" | "distance";
+  const initialPage = searchParams.get("page") ? parseInt(searchParams.get("page")!, 10) : 1;
 
   // View Mode: Marketplace Feed or Interactive Map
   const [viewMode, setViewMode] = useState<"marketplace" | "map">("marketplace");
 
-  // Core filter states (Defaulting to Hyderabad & Hitec City matching user specification)
+  // Core filter states (Synchronized with URL params)
   const [selectedCity, setSelectedCity] = useState<"Hyderabad" | "Vijayawada" | "Guntur">(initialCity);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(initialCategory);
-  const [selectedLocality, setSelectedLocality] = useState<string | null>("Hitec City");
+  const [selectedLocality, setSelectedLocality] = useState<string | null>(initialLocality);
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
-  const [verifiedOnly, setVerifiedOnly] = useState<boolean>(false);
-  const [openNowOnly, setOpenNowOnly] = useState<boolean>(false);
-  const [dealsOnly, setDealsOnly] = useState<boolean>(false);
-  const [minRating, setMinRating] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<"popular" | "rating" | "distance">("popular");
+  const [verifiedOnly, setVerifiedOnly] = useState<boolean>(initialVerifiedOnly);
+  const [openNowOnly, setOpenNowOnly] = useState<boolean>(initialOpenNow);
+  const [dealsOnly, setDealsOnly] = useState<boolean>(initialDealsOnly);
+  const [minRating, setMinRating] = useState<number | null>(initialMinRating);
+  const [sortBy, setSortBy] = useState<"popular" | "rating" | "distance">(initialSort);
   const [budgetTier, setBudgetTier] = useState<"budget" | "mid" | "premium" | null>(null);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
   const [selectedMapBiz, setSelectedMapBiz] = useState<BusinessItemCard | null>(null);
@@ -174,6 +86,13 @@ function HomeExploreContent() {
   const [businesses, setBusinesses] = useState<BusinessItemCard[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [favorites, setFavorites] = useState<string[]>([]);
+
+  // Server-side Pagination states
+  const [currentPage, setCurrentPage] = useState<number>(initialPage);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [totalRecords, setTotalRecords] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [hasNextPage, setHasNextPage] = useState<boolean>(false);
 
   // Detailed Business Profile / Rate Card Modal
   const [detailModalBiz, setDetailModalBiz] = useState<BusinessItemCard | null>(null);
@@ -208,27 +127,6 @@ function HomeExploreContent() {
   const [newBizClosesAt, setNewBizClosesAt] = useState("09:30 PM");
   const [newBizGst, setNewBizGst] = useState("36AAAAA0000A1Z5");
   const [newBizCoverPhoto, setNewBizCoverPhoto] = useState("https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&auto=format&fit=crop");
-<<<<<<< HEAD
-  const [imageInputMode, setImageInputMode] = useState<"url" | "file" | "presets">("url");
-  const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
-  const [bizCreatedSuccess, setBizCreatedSuccess] = useState(false);
-
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        alert("Please select an image smaller than 5MB.");
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setNewBizCoverPhoto(event.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-=======
   const [imageInputMode, setImageInputMode] = useState<"upload" | "url">("upload");
   const [imageFileName, setImageFileName] = useState("");
   const [isSubmittingBiz, setIsSubmittingBiz] = useState(false);
@@ -249,44 +147,19 @@ function HomeExploreContent() {
       setNewBizCoverPhoto(base64);
     };
     reader.readAsDataURL(file);
->>>>>>> feature/superadmin
   };
 
-  // Auth / Login modal state (User logged in as SparkleSmart Ele... matching screenshot)
+  // Auth / Login modal state
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginPhone, setLoginPhone] = useState("+91 98480 12345");
   const [loginOtp, setLoginOtp] = useState("");
   const [loginOtpSent, setLoginOtpSent] = useState(false);
   const [loginChallengeId, setLoginChallengeId] = useState("");
   const [loginDevOtpHint, setLoginDevOtpHint] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [userName, setUserName] = useState<string>("");
 
-<<<<<<< HEAD
-  // Auto-hide floating app store badges when user reaches the footer
-  const [isFooterVisible, setIsFooterVisible] = useState(false);
-  const footerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = footerRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setIsFooterVisible(entry.isIntersecting);
-      },
-      {
-        root: null,
-        threshold: 0.05,
-      }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  // Read authenticated session from localStorage
-=======
   // Read authenticated session from localStorage and keep synced
->>>>>>> feature/superadmin
   useEffect(() => {
     const syncAuth = () => {
       if (typeof window !== "undefined") {
@@ -328,12 +201,24 @@ function HomeExploreContent() {
     ) || null;
   }, [selectedCategory]);
 
-  // Fetch businesses from live backend API
-  const fetchBusinesses = async () => {
+  // Ref for stale search cancellation
+  const activeSearchAbortRef = React.useRef<AbortController | null>(null);
+
+  // Fetch businesses from live backend API with cancellation, pagination, filters & search
+  const fetchBusinesses = async (pageToFetch: number = currentPage) => {
+    if (activeSearchAbortRef.current) {
+      activeSearchAbortRef.current.abort();
+    }
+    const abortController = new AbortController();
+    activeSearchAbortRef.current = abortController;
+
     setIsLoading(true);
     try {
       const url = new URL(`${API_BASE}/search/businesses`);
       url.searchParams.set("city", selectedCity.toLowerCase());
+      if (selectedLocality) {
+        url.searchParams.set("locality", selectedLocality.toLowerCase().replace(/\s+/g, "-"));
+      }
       if (selectedCategory) {
         url.searchParams.set("category", selectedCategory);
       }
@@ -346,11 +231,51 @@ function HomeExploreContent() {
       if (openNowOnly) {
         url.searchParams.set("openNow", "true");
       }
+      if (dealsOnly) {
+        url.searchParams.set("hasOffers", "true");
+      }
       if (minRating) {
         url.searchParams.set("minRating", minRating.toString());
       }
+      // Server-side sort parameter
+      if (sortBy === "rating") {
+        url.searchParams.set("sortBy", "rating");
+      } else if (sortBy === "distance") {
+        url.searchParams.set("sortBy", "distance");
+      } else {
+        url.searchParams.set("sortBy", "relevance");
+      }
+      // Server-side Pagination parameters
+      url.searchParams.set("page", pageToFetch.toString());
+      url.searchParams.set("limit", pageSize.toString());
 
-      const res = await fetch(url.toString());
+      // Phase 9: Sync state to Browser URL without full-page reloads
+      if (typeof window !== "undefined") {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set("city", selectedCity.toLowerCase());
+        if (selectedLocality) nextUrl.searchParams.set("locality", selectedLocality);
+        else nextUrl.searchParams.delete("locality");
+        if (selectedCategory) nextUrl.searchParams.set("category", selectedCategory);
+        else nextUrl.searchParams.delete("category");
+        if (searchQuery.trim()) nextUrl.searchParams.set("q", searchQuery.trim());
+        else nextUrl.searchParams.delete("q");
+        if (verifiedOnly) nextUrl.searchParams.set("verifiedOnly", "true");
+        else nextUrl.searchParams.delete("verifiedOnly");
+        if (openNowOnly) nextUrl.searchParams.set("openNow", "true");
+        else nextUrl.searchParams.delete("openNow");
+        if (dealsOnly) nextUrl.searchParams.set("hasOffers", "true");
+        else nextUrl.searchParams.delete("hasOffers");
+        if (minRating) nextUrl.searchParams.set("minRating", minRating.toString());
+        else nextUrl.searchParams.delete("minRating");
+        if (sortBy && sortBy !== "popular") nextUrl.searchParams.set("sort", sortBy);
+        else nextUrl.searchParams.delete("sort");
+        if (pageToFetch > 1) nextUrl.searchParams.set("page", pageToFetch.toString());
+        else nextUrl.searchParams.delete("page");
+
+        window.history.pushState({}, "", nextUrl.pathname + nextUrl.search);
+      }
+
+      const res = await fetch(url.toString(), { signal: abortController.signal });
       const json = await res.json();
 
       let items: BusinessItemCard[] = [];
@@ -358,34 +283,65 @@ function HomeExploreContent() {
         items = json.data;
       }
 
-      if (selectedLocality) {
-        items = items.filter(
-          (b) => b.location?.localityName?.toLowerCase() === selectedLocality.toLowerCase()
-        );
-      }
-
-      // Sorting
-      if (sortBy === "rating") {
-        items.sort((a, b) => b.averageRating - a.averageRating);
-      } else if (sortBy === "distance") {
-        items.sort((a, b) => (a.location?.distanceKm || 0) - (b.location?.distanceKm || 0));
-      }
-
       setBusinesses(items);
+
+      if (json.meta) {
+        setCurrentPage(json.meta.page || pageToFetch);
+        setTotalRecords(json.meta.totalRecords || items.length);
+        setTotalPages(json.meta.totalPages || 1);
+        setHasNextPage(Boolean(json.meta.hasNextPage));
+      } else {
+        setTotalRecords(items.length);
+        setTotalPages(1);
+        setHasNextPage(false);
+      }
+
       if (items.length > 0 && !selectedMapBiz) {
         setSelectedMapBiz(items[0]);
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === "AbortError") {
+        // Request superseded by newer search criteria
+        return;
+      }
       console.error("Failed to fetch businesses from API:", err);
       setBusinesses([]);
+      setTotalRecords(0);
+      setTotalPages(1);
+      setHasNextPage(false);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Listen for browser Back/Forward (popstate) to restore all filters seamlessly
   useEffect(() => {
-    fetchBusinesses();
-  }, [selectedCity, selectedCategory, selectedLocality, searchQuery, verifiedOnly, openNowOnly, minRating, sortBy]);
+    const handlePopState = () => {
+      const sp = new URLSearchParams(window.location.search);
+      const c = sp.get("city")?.toLowerCase();
+      setSelectedCity(c === "guntur" ? "Guntur" : c === "vijayawada" ? "Vijayawada" : "Hyderabad");
+      setSelectedCategory(sp.get("category") || null);
+      setSelectedLocality(sp.get("locality") || null);
+      setSearchQuery(sp.get("q") || "");
+      setVerifiedOnly(sp.get("verifiedOnly") === "true");
+      setOpenNowOnly(sp.get("openNow") === "true");
+      setDealsOnly(sp.get("hasOffers") === "true" || sp.get("dealsOnly") === "true");
+      setMinRating(sp.get("minRating") ? parseFloat(sp.get("minRating")!) : null);
+      setSortBy((sp.get("sort") || sp.get("sortBy") || "popular") as "popular" | "rating" | "distance");
+      const p = sp.get("page") ? parseInt(sp.get("page")!, 10) : 1;
+      setCurrentPage(p);
+      fetchBusinesses(p);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  // Sync to page 1 and fetch whenever filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchBusinesses(1);
+  }, [selectedCity, selectedCategory, selectedLocality, searchQuery, verifiedOnly, openNowOnly, dealsOnly, minRating, sortBy, pageSize]);
 
   // Reset all filters
   const handleResetFilters = () => {
@@ -399,6 +355,7 @@ function HomeExploreContent() {
     setSortBy("popular");
     setBudgetTier(null);
     setActiveCollectionId(null);
+    setCurrentPage(1);
   };
 
   // Toggle Favorite
@@ -567,11 +524,7 @@ function HomeExploreContent() {
   };
 
   return (
-<<<<<<< HEAD
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] w-full max-w-full">
-=======
     <div className="min-h-screen flex flex-col bg-[#F8FAFC] overflow-x-clip w-full max-w-full">
->>>>>>> feature/superadmin
       {/* 1. STICKY DESKTOP HEADER & CATEGORIES RIBBON */}
       <DesktopHeader
         selectedCity={selectedCity}
@@ -605,11 +558,7 @@ function HomeExploreContent() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           
           {/* LEFT COLUMN: FILTERS & CATEGORIES (3 cols) - STICKY */}
-<<<<<<< HEAD
-          <aside className="lg:col-span-3 lg:sticky lg:top-[116px] self-start z-20">
-=======
           <aside className="lg:col-span-3 lg:sticky lg:top-28 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto no-scrollbar scrollbar-none z-10">
->>>>>>> feature/superadmin
             <DesktopFilterSidebar
               selectedCity={selectedCity}
               selectedCategory={selectedCategory}
@@ -632,7 +581,7 @@ function HomeExploreContent() {
               budgetTier={budgetTier}
               onSelectBudgetTier={setBudgetTier}
               onResetFilters={handleResetFilters}
-              totalResults={businesses.length}
+              totalResults={totalRecords}
             />
           </aside>
 
@@ -668,10 +617,10 @@ function HomeExploreContent() {
 
               <div className="text-right pr-2">
                 <span className="text-[11px] font-bold text-slate-800">
-                  {businesses.length} Verified
+                  {totalRecords} Verified {totalRecords === 1 ? "Business" : "Businesses"}
                 </span>
                 <span className="text-[10px] text-slate-400 block -mt-0.5">
-                  in {selectedLocality || selectedCity}
+                  in {selectedLocality || selectedCity} • Page {currentPage} of {totalPages}
                 </span>
               </div>
             </div>
@@ -928,7 +877,7 @@ function HomeExploreContent() {
             {/* B. RESULTS HEADER & SUMMARY BAR (Matching Screenshot) */}
             <div className="bg-white rounded-2xl border border-slate-200/90 px-5 py-3.5 shadow-2xs">
               <h3 className="text-sm font-black text-slate-900">
-                Showing {businesses.length || 33} Verified Providers in {selectedLocality || "Hitec City"}
+                Showing {totalRecords} {verifiedOnly ? "Verified " : ""}Providers in {selectedLocality || selectedCity}
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
                 Sorted by closest driving distance • Verified ratings & live contact ready
@@ -979,6 +928,70 @@ function HomeExploreContent() {
               </div>
             )}
 
+            {/* Server-Side Pagination Bar */}
+            {totalPages > 1 && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-3.5 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <div className="text-slate-600 font-semibold">
+                  Showing <span className="font-bold text-slate-900">{(currentPage - 1) * pageSize + 1}</span>–<span className="font-bold text-slate-900">{Math.min(currentPage * pageSize, totalRecords)}</span> of <span className="font-bold text-slate-900">{totalRecords}</span> verified businesses
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  {/* Previous Page */}
+                  <button
+                    disabled={currentPage <= 1 || isLoading}
+                    onClick={() => {
+                      const nextP = Math.max(1, currentPage - 1);
+                      setCurrentPage(nextP);
+                      fetchBusinesses(nextP);
+                      window.scrollTo({ top: 380, behavior: "smooth" });
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs"
+                  >
+                    ← Prev
+                  </button>
+
+                  {/* Page numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                    .map((p, idx, arr) => (
+                      <React.Fragment key={p}>
+                        {idx > 0 && arr[idx - 1] !== p - 1 && (
+                          <span className="px-1 text-slate-400 select-none">...</span>
+                        )}
+                        <button
+                          onClick={() => {
+                            setCurrentPage(p);
+                            fetchBusinesses(p);
+                            window.scrollTo({ top: 380, behavior: "smooth" });
+                          }}
+                          className={`w-8 h-8 rounded-xl font-bold transition text-xs shadow-2xs ${
+                            currentPage === p
+                              ? "bg-[#0076D7] text-white"
+                              : "border border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
+                          }`}
+                        >
+                          {p}
+                        </button>
+                      </React.Fragment>
+                    ))}
+
+                  {/* Next Page */}
+                  <button
+                    disabled={currentPage >= totalPages || isLoading}
+                    onClick={() => {
+                      const nextP = Math.min(totalPages, currentPage + 1);
+                      setCurrentPage(nextP);
+                      fetchBusinesses(nextP);
+                      window.scrollTo({ top: 380, behavior: "smooth" });
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold disabled:opacity-40 disabled:cursor-not-allowed transition shadow-2xs"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* D. TRAVEL & BOOKINGS STRIP */}
             <div className="bg-gradient-to-r from-blue-900 to-indigo-900 rounded-2xl p-5 text-white shadow-sm border border-blue-800 space-y-3">
               <div className="flex items-center justify-between">
@@ -994,11 +1007,7 @@ function HomeExploreContent() {
               </div>
               <div className="grid grid-cols-3 gap-2.5 pt-1">
                 <div 
-                  onClick={() => showToast({
-                    type: "info",
-                    title: "Airfare Bookings",
-                    message: "Direct connectivity from Vijayawada Airport (VGA) & Hyderabad (HYD). Lowest fares guaranteed.",
-                  })}
+                  onClick={() => alert("✈️ Airfare Search: Direct connectivity from Vijayawada Airport (VGA) & Hyderabad (HYD)")}
                   className="bg-white/10 hover:bg-white/20 p-3 rounded-xl cursor-pointer transition border border-white/10 text-center space-y-1"
                 >
                   <Plane className="w-5 h-5 mx-auto text-blue-300" />
@@ -1006,11 +1015,7 @@ function HomeExploreContent() {
                   <span className="text-[10px] text-slate-300">From ₹2,499</span>
                 </div>
                 <div 
-                  onClick={() => showToast({
-                    type: "info",
-                    title: "Outstation Cabs",
-                    message: "Round-trip & One-way cabs from Vijayawada & Guntur to Hyderabad, Tirupati, Vizag.",
-                  })}
+                  onClick={() => alert("🚖 Outstation Cabs: Round-trip & One-way cabs from Vijayawada & Guntur to Hyderabad, Tirupati, Vizag")}
                   className="bg-white/10 hover:bg-white/20 p-3 rounded-xl cursor-pointer transition border border-white/10 text-center space-y-1"
                 >
                   <Car className="w-5 h-5 mx-auto text-amber-300" />
@@ -1018,11 +1023,7 @@ function HomeExploreContent() {
                   <span className="text-[10px] text-slate-300">₹11/km onwards</span>
                 </div>
                 <div 
-                  onClick={() => showToast({
-                    type: "info",
-                    title: "Train & Bus Bookings",
-                    message: "Live PNR status, running tracking & Tatkal ticket alerts in Andhra Pradesh.",
-                  })}
+                  onClick={() => alert("🚆 Train Bookings: PNR status, live running tracking & fast Tatkal alert updates")}
                   className="bg-white/10 hover:bg-white/20 p-3 rounded-xl cursor-pointer transition border border-white/10 text-center space-y-1"
                 >
                   <Train className="w-5 h-5 mx-auto text-emerald-300" />
@@ -1035,11 +1036,7 @@ function HomeExploreContent() {
           </section>
 
           {/* RIGHT COLUMN: INSTANT BEST DEAL QUOTES & TRENDING (3 cols) - STICKY */}
-<<<<<<< HEAD
-          <aside id="right-deals-sidebar" className="lg:col-span-3 lg:sticky lg:top-[116px] self-start z-20">
-=======
           <aside id="right-deals-sidebar" className="lg:col-span-3 lg:sticky lg:top-28 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto no-scrollbar scrollbar-none z-10">
->>>>>>> feature/superadmin
             <DesktopRightSidebar
               selectedCity={selectedCity}
               onSearchTopic={(topic) => setSearchQuery(topic)}
@@ -1542,35 +1539,6 @@ function HomeExploreContent() {
                     />
                   </div>
 
-<<<<<<< HEAD
-                  {/* Select Image or URL Option */}
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <label className="block text-xs font-semibold text-slate-700">
-                        Business Image / Cover Photo
-                      </label>
-                      <div className="flex items-center gap-1 bg-slate-200/80 p-0.5 rounded-lg text-[10px] font-bold">
-                        <button
-                          type="button"
-                          onClick={() => setImageInputMode("url")}
-                          className={`px-2 py-0.5 rounded-md transition ${imageInputMode === "url" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
-                        >
-                          🔗 Image URL
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setImageInputMode("file")}
-                          className={`px-2 py-0.5 rounded-md transition ${imageInputMode === "file" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
-                        >
-                          📁 Select File
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setImageInputMode("presets")}
-                          className={`px-2 py-0.5 rounded-md transition ${imageInputMode === "presets" ? "bg-white text-[#0076D7] shadow-xs" : "text-slate-600 hover:text-slate-900"}`}
-                        >
-                          ✨ Presets
-=======
                   {/* Cover Photo / Storefront Image with File Upload OR Enter URL Option */}
                   <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2.5">
                     <div className="flex items-center justify-between">
@@ -1596,82 +1564,10 @@ function HomeExploreContent() {
                           }`}
                         >
                           Enter URL
->>>>>>> feature/superadmin
                         </button>
                       </div>
                     </div>
 
-<<<<<<< HEAD
-                    {/* Mode 1: Direct Image URL */}
-                    {imageInputMode === "url" && (
-                      <div>
-                        <input
-                          type="url"
-                          placeholder="https://images.unsplash.com/... or paste image URL"
-                          value={newBizCoverPhoto}
-                          onChange={(e) => setNewBizCoverPhoto(e.target.value)}
-                          className="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#0076D7]"
-                        />
-                        <p className="text-[10px] text-slate-400 mt-1">Enter a direct image link (JPG, PNG, WebP or Unsplash URL)</p>
-                      </div>
-                    )}
-
-                    {/* Mode 2: File Selector from Device */}
-                    {imageInputMode === "file" && (
-                      <div>
-                        <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-300 hover:border-[#0076D7] bg-white rounded-xl cursor-pointer transition">
-                          <div className="flex flex-col items-center justify-center pt-2 pb-2">
-                            <Camera className="w-5 h-5 text-slate-400 mb-1" />
-                            <p className="text-xs font-semibold text-slate-700">Click to Select / Upload Image</p>
-                            <p className="text-[10px] text-slate-400">PNG, JPG, WebP up to 5MB</p>
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleImageFileUpload}
-                          />
-                        </label>
-                      </div>
-                    )}
-
-                    {/* Mode 3: Curated Presets for Current Category */}
-                    {imageInputMode === "presets" && (
-                      <div className="grid grid-cols-4 gap-2">
-                        {(CATEGORY_PRESET_IMAGES[newBizCategory] || CATEGORY_PRESET_IMAGES["restaurants"]).map((imgUrl, idx) => (
-                          <div
-                            key={idx}
-                            onClick={() => setNewBizCoverPhoto(imgUrl)}
-                            className={`relative h-14 rounded-lg overflow-hidden cursor-pointer border-2 transition ${newBizCoverPhoto === imgUrl ? "border-[#0076D7] ring-2 ring-blue-200" : "border-slate-200 hover:border-slate-400"}`}
-                          >
-                            <img src={imgUrl} alt="Preset" className="w-full h-full object-cover" />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Selected Image Preview */}
-                    {newBizCoverPhoto && (
-                      <div className="flex items-center gap-3 bg-white p-2 rounded-lg border border-slate-200">
-                        <img
-                          src={newBizCoverPhoto}
-                          alt="Preview"
-                          className="w-14 h-12 rounded-lg object-cover shadow-xs border border-slate-100"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <span className="text-[11px] font-bold text-emerald-600 block">✓ Image Selected & Will Be Saved in DB</span>
-                          <span className="text-[10px] text-slate-400 truncate block">
-                            {newBizCoverPhoto.startsWith("data:") ? "Local File Selected (Base64)" : newBizCoverPhoto}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setNewBizCoverPhoto("")}
-                          className="text-[10px] font-bold text-red-500 hover:text-red-700 px-2 py-1"
-                        >
-                          Clear
-                        </button>
-=======
                     {imageInputMode === "upload" ? (
                       <div>
                         <label className="flex flex-col items-center justify-center border-2 border-dashed border-slate-300 hover:border-[#0076D7] bg-white rounded-xl p-3.5 cursor-pointer transition text-center group">
@@ -1750,7 +1646,6 @@ function HomeExploreContent() {
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
->>>>>>> feature/superadmin
                       </div>
                     )}
                   </div>
@@ -1943,47 +1838,6 @@ function HomeExploreContent() {
         </div>
       )}
 
-<<<<<<< HEAD
-      {/* FLOATING APP DOWNLOAD BADGES (Auto-hides smoothly when user reaches the footer) */}
-      <div 
-        className={`fixed right-3 bottom-24 z-50 flex flex-col gap-2 transition-all duration-300 ease-in-out ${
-          isFooterVisible 
-            ? "opacity-0 pointer-events-none translate-x-12 scale-90" 
-            : "opacity-100 pointer-events-auto translate-x-0 scale-100"
-        }`}
-      >
-        <div 
-          onClick={() => showToast({
-            type: "success",
-            title: "Google Play Store",
-            message: "Redirecting to download Hello-Hi Android App on Google Play...",
-          })}
-          className="bg-[#0B1220] hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition flex items-center gap-2.5 select-none hover:scale-105 active:scale-95 group"
-          title="Download on Google Play Store"
-        >
-          {/* Authentic Google Play Store Multi-Color Icon */}
-          <svg viewBox="0 0 24 24" className="w-5 h-5 shrink-0" fill="none">
-            <path
-              d="M3.609 1.813A2.083 2.083 0 0 0 3 3.327v17.346c0 .594.225 1.134.609 1.514l.08.074 9.715-9.715v-.228L3.689 1.739l-.08.074z"
-              fill="#00D2FF"
-            />
-            <path
-              d="M16.634 15.539l-3.23-3.23v-.228l3.23-3.23.073.042 3.829 2.176c1.093.621 1.093 1.637 0 2.258l-3.829 2.176-.073.046z"
-              fill="#FFCE00"
-            />
-            <path
-              d="M13.404 12.081l-9.795 9.795c.422.447 1.107.498 1.892.052l11.133-6.326-3.23-3.521z"
-              fill="#FF3333"
-            />
-            <path
-              d="M13.404 11.919l3.23-3.521L5.501 2.072C4.716 1.626 4.031 1.677 3.609 2.124l9.795 9.795z"
-              fill="#00F076"
-            />
-          </svg>
-          <div className="flex flex-col text-left leading-none">
-            <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">GET APP</span>
-            <span className="text-xs font-black text-white group-hover:text-emerald-400 transition">Android</span>
-=======
       {/* FLOATING APP DOWNLOAD BADGES (Right Margin with Blinking Attention Animation & Official Store Icons) */}
       <div className="fixed right-3 bottom-24 z-50 flex flex-col gap-2.5">
         <a 
@@ -1996,27 +1850,8 @@ function HomeExploreContent() {
           {/* Shimmer Light Sweep */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
             <div className="w-8 h-full bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer-sweep" />
->>>>>>> feature/superadmin
           </div>
 
-<<<<<<< HEAD
-        <div 
-          onClick={() => showToast({
-            type: "info",
-            title: "Apple App Store",
-            message: "Redirecting to download Hello-Hi iOS App on Apple App Store...",
-          })}
-          className="bg-[#0B1220] hover:bg-slate-900 text-white px-3.5 py-2 rounded-xl shadow-xl border border-slate-700/80 cursor-pointer transition flex items-center gap-2.5 select-none hover:scale-105 active:scale-95 group"
-          title="Download on Apple App Store"
-        >
-          {/* Authentic Apple App Store Icon */}
-          <svg viewBox="0 0 384 512" className="w-5 h-5 shrink-0 fill-current text-white group-hover:text-slate-200 transition">
-            <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 66.2 30 148.8c14.7 39.4 39 88.5 76.5 89 33.7.6 44.2-22.3 84.7-22.3s50 22.3 84.7 21.7c37.5-.6 62.8-49.6 77.5-89 10.8-28.7 15.3-43.7 22.8-63.5-62-23.7-61.5-89.5-61.5-89.5zM250.7 94.6c15.2-19.2 25.5-45.7 22.7-72.6-22.5 1-49.6 15.2-65.7 34.4-14.2 16.8-26.7 44-23.4 70.3 25 .8 51.2-12.9 66.4-32.1z" />
-          </svg>
-          <div className="flex flex-col text-left leading-none">
-            <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold">GET APP</span>
-            <span className="text-xs font-black text-white group-hover:text-blue-400 transition">iOS</span>
-=======
           {/* Pulsing Attention Beacon */}
           <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 z-10">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-90"></span>
@@ -2025,7 +1860,6 @@ function HomeExploreContent() {
 
           <div className="w-5 h-5 flex items-center justify-center shrink-0 relative z-10">
             <PlayStoreIcon className="w-4.5 h-4.5 group-hover:scale-110 transition-transform" />
->>>>>>> feature/superadmin
           </div>
           <div className="flex flex-col text-left leading-none relative z-10">
             <span className="text-[8px] uppercase tracking-wider text-slate-400 font-bold group-hover:text-emerald-300">GET APP</span>
@@ -2062,9 +1896,7 @@ function HomeExploreContent() {
       </div>
 
       {/* 7. FULL FOOTER */}
-      <div ref={footerRef}>
-        <DesktopFooter />
-      </div>
+      <DesktopFooter />
     </div>
   );
 }

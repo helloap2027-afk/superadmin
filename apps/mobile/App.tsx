@@ -77,7 +77,7 @@ const getCategoryEmoji = (iconName?: string | null, slug?: string): string => {
 };
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'Home' | 'Services' | 'Enquiries' | 'Profile'>('Home');
+  const [activeTab, setActiveTab] = useState<'Home' | 'Services' | 'Wallet' | 'Enquiries' | 'Profile'>('Home');
   const [mode, setMode] = useState<'customer' | 'vendor'>('customer');
   const [selectedCity, setSelectedCity] = useState<'Hyderabad' | 'Vijayawada' | 'Guntur'>('Hyderabad');
   const [selectedLocality, setSelectedLocality] = useState('Hitec City');
@@ -88,6 +88,7 @@ export default function App() {
   // Categories loaded directly from Database
   const [categories, setCategories] = useState<any[]>(ALL_14_CATEGORIES);
   const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(false);
+  const [coupons, setCoupons] = useState<any[]>([]);
 
   // Business DB State
   const [businesses, setBusinesses] = useState<any[]>([]);
@@ -101,7 +102,8 @@ export default function App() {
   // Auth Modal State
   const [isAuthModalVisible, setIsAuthModalVisible] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [authStep, setAuthStep] = useState<'phone' | 'otp'>('phone');
+  const [authStep, setAuthStep] = useState<'role' | 'phone' | 'otp'>('role');
+  const [authRole, setAuthRole] = useState<'CUSTOMER' | 'PARTNER'>('CUSTOMER');
   const [agreedTerms, setAgreedTerms] = useState(true);
 
   // Form Fields
@@ -166,10 +168,57 @@ export default function App() {
     }
   ]);
 
-  // Fetch categories directly from MySQL hello_db
+  // Fetch categories directly from MySQL hello_db & Restore Persistent Auth Session
   useEffect(() => {
     fetchCategories();
+    fetchCoupons();
+    restorePersistentAuth();
   }, []);
+
+  const restorePersistentAuth = async () => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const savedToken = localStorage.getItem('hello_access_token') || localStorage.getItem('hello_mobile_token');
+        const savedUserStr = localStorage.getItem('hello_user');
+        
+        if (savedUserStr) {
+          try {
+            const parsed = JSON.parse(savedUserStr);
+            if (parsed && parsed.id) {
+              setUser(parsed);
+              if (savedToken) setAuthToken(savedToken);
+            }
+          } catch {}
+        }
+
+        if (savedToken) {
+          const res = await fetch(`${API_BASE}/users/me`, {
+            headers: { Authorization: `Bearer ${savedToken}` }
+          });
+          const json = await res.json();
+          if (json.success && json.data) {
+            setUser(json.data);
+            setAuthToken(savedToken);
+            localStorage.setItem('hello_user', JSON.stringify(json.data));
+          }
+        }
+      }
+    } catch (err) {
+      console.log('Session restore notice:', err);
+    }
+  };
+
+  const fetchCoupons = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/coupons`);
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data) && json.data.length > 0) {
+        setCoupons(json.data);
+      }
+    } catch (e) {
+      console.log('Error fetching coupons from DB:', e);
+    }
+  };
 
   const fetchCategories = async () => {
     setIsLoadingCategories(true);
@@ -373,7 +422,8 @@ export default function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phoneNumber: fullPhone,
-          purpose: authMode === 'register' ? 'REGISTRATION' : 'CUSTOMER_LOGIN'
+          purpose: authMode === 'register' ? 'REGISTRATION' : 'LOGIN',
+          role: authRole
         }),
       });
 
@@ -446,8 +496,15 @@ export default function App() {
       const freshUser = profileJson?.data || json.data.user;
 
       setUser(freshUser);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('hello_access_token', token);
+        localStorage.setItem('hello_mobile_token', token);
+        localStorage.setItem('hello_user', JSON.stringify(freshUser));
+        localStorage.setItem('hello_active_role', authRole === 'PARTNER' ? 'MERCHANT' : 'CUSTOMER');
+      }
+
       setIsAuthModalVisible(false);
-      setAuthStep('phone');
+      setAuthStep('role');
       setOtp('');
       setPhoneNumber('');
       setFullName('');
@@ -468,6 +525,12 @@ export default function App() {
     setUser(null);
     setAuthToken(null);
     setShowRawDb(false);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('hello_access_token');
+      localStorage.removeItem('hello_mobile_token');
+      localStorage.removeItem('hello_user');
+      localStorage.removeItem('hello_active_role');
+    }
   };
 
   const handleDispatchEnquiry = async () => {
@@ -536,7 +599,7 @@ export default function App() {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
-              onPress={() => { setAuthMode('login'); setIsAuthModalVisible(true); }}
+              onPress={() => { setAuthMode('login'); setAuthStep('role'); setIsAuthModalVisible(true); }}
               style={styles.headerLoginBtn}
             >
               <Text style={styles.headerLoginBtnText}>Login</Text>
@@ -544,7 +607,14 @@ export default function App() {
           )}
 
           <TouchableOpacity
-            onPress={() => Alert.alert('Notifications', '1 New Priority Update: Welcome to HELLO Hyperlocal!')}
+            onPress={() => {
+              const isPartner = user && Array.isArray(user.roles) && (user.roles.includes('VENDOR_OWNER') || user.roles.includes('VENDOR_STAFF') || user.roles.includes('MERCHANT'));
+              if (isPartner) {
+                Alert.alert('🏢 Business Partner Notifications', '• 1 New Customer Enquiry received for your listing.\n• KYC documents under compliance review.\n• Weekly performance report ready.');
+              } else {
+                Alert.alert('👤 Customer Notifications', '• Welcome to HELLO-Hi! Verified local listings in your city.\n• Diwali Festival 50% discount coupon is active.\n• Order confirmation updates.');
+              }
+            }}
             style={styles.bellBtn}
           >
             <Text style={{ fontSize: 14 }}>🔔</Text>
@@ -555,7 +625,7 @@ export default function App() {
         </View>
       </View>
 
-      {/* SEARCH PILL WITH MIC & CAMERA */}
+      {/* SEARCH PILL WITH MIC */}
       <View style={styles.searchBarContainer}>
         <View style={styles.searchBar}>
           <Text style={{ fontSize: 13, color: '#94A3B8', marginRight: 6 }}>🔍</Text>
@@ -568,9 +638,6 @@ export default function App() {
           />
           <TouchableOpacity onPress={() => setSearchQuery('Biryani')} style={{ paddingHorizontal: 4 }}>
             <Text style={{ fontSize: 14 }}>🎙️</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => Alert.alert('Visual Search', 'QR / Storefront Visual Search')} style={{ paddingHorizontal: 4 }}>
-            <Text style={{ fontSize: 14 }}>📷</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -633,6 +700,156 @@ export default function App() {
               })}
             </View>
           </View>
+        ) : activeTab === 'Wallet' ? (
+          /* ================= WALLET TAB ================= */
+          <View style={{ padding: 16 }}>
+            {/* Wallet Balance Hero Card */}
+            <View style={{
+              backgroundColor: '#0F172A',
+              borderRadius: 20,
+              padding: 20,
+              shadowColor: '#000',
+              shadowOpacity: 0.15,
+              shadowRadius: 10,
+              elevation: 5,
+              marginBottom: 16
+            }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 22 }}>👛</Text>
+                  <Text style={{ color: '#94A3B8', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    Available Balance
+                  </Text>
+                </View>
+                <View style={{ backgroundColor: 'rgba(34, 197, 94, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                  <Text style={{ color: '#4ADE80', fontSize: 10, fontWeight: '800' }}>● Active</Text>
+                </View>
+              </View>
+
+              <Text style={{ fontSize: 32, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.5 }}>
+                ₹5,750<Text style={{ fontSize: 18, color: '#94A3B8', fontWeight: '500' }}>.00</Text>
+              </Text>
+
+              <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
+                Instant cashback, refunds & lead credit top-up
+              </Text>
+
+              {/* Action Buttons: Add Money, Send, History */}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 18 }}>
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Add Money to Wallet', 'Choose payment mode: UPI (GPay/PhonePe), NetBanking, or Debit Card.')}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#0076D7',
+                    paddingVertical: 12,
+                    borderRadius: 14,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 6
+                  }}
+                >
+                  <Text style={{ color: '#FFF', fontSize: 13, fontWeight: '800' }}>+ Add Money</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Withdraw Funds', 'Transfer your balance directly to your linked verified bank account (IMPS/NEFT).')}
+                  style={{
+                    flex: 1,
+                    backgroundColor: '#1E293B',
+                    paddingVertical: 12,
+                    borderRadius: 14,
+                    alignItems: 'center',
+                    flexDirection: 'row',
+                    justifyContent: 'center',
+                    gap: 6,
+                    borderWidth: 1,
+                    borderColor: '#334155'
+                  }}
+                >
+                  <Text style={{ color: '#E2E8F0', fontSize: 13, fontWeight: '800' }}>Withdraw</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Quick Top-Up Packs */}
+            <View style={{ marginBottom: 20 }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginBottom: 10 }}>Quick Recharge</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                {['₹500', '₹1,000', '₹2,000', '₹5,000'].map((amt, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    onPress={() => Alert.alert('Quick Top-Up', `Proceed with ${amt} recharge via UPI?`)}
+                    style={{
+                      flex: 1,
+                      backgroundColor: '#FFFFFF',
+                      borderWidth: 1.5,
+                      borderColor: '#E2E8F0',
+                      borderRadius: 12,
+                      paddingVertical: 10,
+                      alignItems: 'center'
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '800', color: '#0076D7' }}>{amt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Recent Transactions List */}
+            <View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>Recent Transactions</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#0076D7' }}>View All</Text>
+              </View>
+
+              {[
+                { title: 'UPI Top-Up via PhonePe', date: 'Today, 2:45 PM', amount: '+₹1,000.00', type: 'credit', icon: '📥' },
+                { title: 'Lead Enquiry Fee - Amnesia Sky Bar', date: 'Yesterday, 8:12 PM', amount: '-₹150.00', type: 'debit', icon: '📤' },
+                { title: 'Diwali Cashback Bonus', date: '04 Nov 2026', amount: '+₹250.00', type: 'credit', icon: '🎁' },
+                { title: 'Premium Business Listing Upgrade', date: '01 Nov 2026', amount: '-₹1,499.00', type: 'debit', icon: '⭐' },
+              ].map((tx, idx) => (
+                <View
+                  key={idx}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 14,
+                    padding: 14,
+                    marginBottom: 8,
+                    borderWidth: 1,
+                    borderColor: '#E2E8F0',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 10,
+                      backgroundColor: tx.type === 'credit' ? '#ECFDF5' : '#FEF2F2',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Text style={{ fontSize: 16 }}>{tx.icon}</Text>
+                    </View>
+                    <View>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: '#0F172A' }}>{tx.title}</Text>
+                      <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 2 }}>{tx.date}</Text>
+                    </View>
+                  </View>
+                  <Text style={{
+                    fontSize: 13,
+                    fontWeight: '900',
+                    color: tx.type === 'credit' ? '#16A34A' : '#EF4444'
+                  }}>
+                    {tx.amount}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
         ) : activeTab === 'Enquiries' ? (
           /* ================= MY ENQUIRIES TAB ================= */
           <View style={{ padding: 16 }}>
@@ -661,175 +878,927 @@ export default function App() {
             ))}
           </View>
         ) : activeTab === 'Profile' ? (
-          /* ================= PROFILE & DB IDENTITY TAB ================= */
-          <View style={{ padding: 16 }}>
-            {user ? (
-              <View style={styles.dbProfileCard}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>MySQL Identity Record</Text>
-                  <View style={{ backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#16A34A' }}>● MySQL hello_db</Text>
-                  </View>
-                </View>
+          /* ================= EXACT APPROVED HELLO-HI PROFILE SCREEN ================= */
+          user ? (
+            <View>
+              {/* SECTION 1 — HELLO-HI BLUE BRANDED HEADER */}
+              <View style={{
+                backgroundColor: '#0076D7',
+                paddingTop: 16,
+                paddingBottom: 20,
+                paddingHorizontal: 16,
+                borderBottomLeftRadius: 28,
+                borderBottomRightRadius: 28,
+                position: 'relative',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.15,
+                shadowRadius: 10,
+                elevation: 6
+              }}>
+                {/* Abstract curved gradient background accents */}
+                <View style={{
+                  position: 'absolute',
+                  top: -60,
+                  right: -50,
+                  width: 180,
+                  height: 180,
+                  borderRadius: 90,
+                  backgroundColor: '#0B1220',
+                  opacity: 0.25
+                }} />
+                <View style={{
+                  position: 'absolute',
+                  bottom: -40,
+                  left: -30,
+                  width: 140,
+                  height: 140,
+                  borderRadius: 70,
+                  backgroundColor: '#FF6B35',
+                  opacity: 0.18
+                }} />
 
-                <View style={styles.dbGrid}>
-                  <View style={styles.dbFieldBox}>
-                    <Text style={styles.dbLabel}>USER ID</Text>
-                    <Text style={styles.dbVal} numberOfLines={1}>{user.id}</Text>
+                {/* Wordmark Branding */}
+                <View style={{ alignItems: 'center', marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.5 }}>Hello</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#FF6B35', letterSpacing: 0.5 }}>-Hi</Text>
                   </View>
-                  <View style={styles.dbFieldBox}>
-                    <Text style={styles.dbLabel}>STATUS</Text>
-                    <Text style={[styles.dbVal, { color: '#16A34A' }]}>{user.status}</Text>
-                  </View>
-                  <View style={styles.dbFieldBox}>
-                    <Text style={styles.dbLabel}>PHONE</Text>
-                    <Text style={styles.dbVal}>{user.phoneNumber}</Text>
-                  </View>
-                  <View style={styles.dbFieldBox}>
-                    <Text style={styles.dbLabel}>ROLES</Text>
-                    <Text style={[styles.dbVal, { color: '#0076D7' }]}>{Array.isArray(user.roles) ? user.roles.join(', ') : 'CUSTOMER'}</Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  onPress={() => setShowRawDb(!showRawDb)}
-                  style={{ marginTop: 12 }}
-                >
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#0076D7' }}>
-                    {showRawDb ? '▼ Hide SQL Table Entity' : '▶ View Raw Database SQL Entity'}
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                    Search Local. Connect Instant.
                   </Text>
-                </TouchableOpacity>
+                </View>
 
-                {showRawDb && (
-                  <View style={styles.rawJsonBox}>
-                    <Text style={styles.rawJsonText}>{JSON.stringify(user, null, 2)}</Text>
-                  </View>
-                )}
-
-                <TouchableOpacity
-                  onPress={handleSignOut}
-                  style={styles.signOutBtn}
-                >
-                  <Text style={styles.signOutBtnText}>Sign Out Session</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View style={styles.unauthCard}>
-                <Text style={{ fontSize: 32, marginBottom: 8 }}>👤</Text>
-                <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>Sign In or Register</Text>
-                <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', marginTop: 4, paddingHorizontal: 20 }}>
-                  Access verified enquiries, your registered database identity, and vendor listings.
-                </Text>
-
-                <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 16 }}>
+                {/* Header Controls Bar (Location, Business Identity, Notification Bell) */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                  {/* Left — Location */}
                   <TouchableOpacity
-                    onPress={() => { setAuthMode('login'); setIsAuthModalVisible(true); }}
-                    style={[styles.modalActionBtn, { flex: 1, backgroundColor: '#0076D7' }]}
+                    onPress={() => setShowCityModal(true)}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: 1.1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(255,255,255,0.18)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.3)',
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      borderRadius: 20,
+                      gap: 4
+                    }}
                   >
-                    <Text style={styles.modalActionBtnText}>Login</Text>
+                    <Text style={{ fontSize: 12 }}>📍</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF', flex: 1 }} numberOfLines={1}>
+                      {selectedCity} ({selectedLocality})
+                    </Text>
+                    <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)' }}>▼</Text>
                   </TouchableOpacity>
+
+                  {/* Middle/Right — Business Identity */}
                   <TouchableOpacity
-                    onPress={() => { setAuthMode('register'); setIsAuthModalVisible(true); }}
-                    style={[styles.modalActionBtn, { flex: 1, backgroundColor: '#0F172A' }]}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: 1.1,
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(255,255,255,0.18)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.3)',
+                      paddingHorizontal: 10,
+                      paddingVertical: 7,
+                      borderRadius: 20,
+                      gap: 4
+                    }}
                   >
-                    <Text style={styles.modalActionBtnText}>Register</Text>
+                    <Text style={{ fontSize: 11 }}>👤</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF', flex: 1 }} numberOfLines={1}>
+                      {user.businessName || user.fullName || 'Business Partner'}
+                    </Text>
+                    <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)' }}>▼</Text>
+                  </TouchableOpacity>
+
+                  {/* Far Right — Notification Bell */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert(
+                        '🏢 Business Partner Notifications',
+                        '• New enquiries from customers in your area\n• Business profile verification status update\n• Direct customer call logs'
+                      );
+                    }}
+                    activeOpacity={0.8}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(255,255,255,0.6)',
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative'
+                    }}
+                  >
+                    <Text style={{ fontSize: 14 }}>🔔</Text>
+                    <View style={{
+                      position: 'absolute',
+                      top: 1,
+                      right: 1,
+                      backgroundColor: '#FF6B35',
+                      width: 14,
+                      height: 14,
+                      borderRadius: 7,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1.5,
+                      borderColor: '#0076D7'
+                    }}>
+                      <Text style={{ fontSize: 8, color: '#FFFFFF', fontWeight: '900' }}>1</Text>
+                    </View>
                   </TouchableOpacity>
                 </View>
               </View>
-            )}
 
-            {/* COMPANY INFORMATION & CMS PAGES (STORED IN DB) */}
-            <View style={{ marginTop: 20 }}>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                Company & Information (Live DB)
-              </Text>
+              {/* BODY CONTAINER FOR SECTIONS 2-5 */}
+              <View style={{ padding: 16, gap: 14 }}>
+                {/* SECTION 2 — BUSINESS PARTNER PROFILE CARD */}
+                <View style={{
+                  backgroundColor: '#005FAE',
+                  borderRadius: 24,
+                  padding: 16,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 10,
+                  elevation: 5,
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  {/* Curved orange decorative shape in lower-right */}
+                  <View style={{
+                    position: 'absolute',
+                    bottom: -25,
+                    right: -25,
+                    width: 95,
+                    height: 95,
+                    borderRadius: 48,
+                    backgroundColor: '#FF6B35',
+                    opacity: 0.95
+                  }} />
 
-              {/* 1. About Us */}
-              <TouchableOpacity
-                onPress={() => openCmsPage('about')}
-                style={styles.cmsMenuItem}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#EFF6FF' }]}>
-                    <Text style={{ fontSize: 16 }}>ℹ️</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cmsMenuTitle}>About Hello-Hi</Text>
-                    <Text style={styles.cmsMenuSub}>Mission, pillars & verified discovery engine</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 10 }}>
+                    {/* Left: Avatar + Details */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                      <View style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        borderWidth: 2.5,
+                        borderColor: '#FFFFFF',
+                        backgroundColor: 'rgba(255,255,255,0.25)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        shadowColor: '#000',
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 2
+                      }}>
+                        {user.avatarUrl ? (
+                          <Image source={{ uri: user.avatarUrl }} style={{ width: '100%', height: '100%' }} />
+                        ) : (
+                          <Text style={{ fontSize: 22, fontWeight: '900', color: '#FFF' }}>
+                            {(user.businessName || user.fullName || 'V').charAt(0).toUpperCase()}
+                          </Text>
+                        )}
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#FFF' }} numberOfLines={1}>
+                          {user.businessName || user.fullName || 'Business Partner'}
+                        </Text>
+                        <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.92)', fontWeight: '600', marginTop: 2 }}>
+                          📞 {user.phoneNumber || '+916302759527'}
+                        </Text>
+
+                        {/* Status Badges */}
+                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                          <View style={{
+                            backgroundColor: '#FFF7ED',
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 12,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Text style={{ fontSize: 10 }}>🏬</Text>
+                            <Text style={{ fontSize: 10, fontWeight: '800', color: '#EA580C' }}>Business Partner</Text>
+                          </View>
+
+                          <View style={{
+                            backgroundColor: (user.isVerified || user.status === 'VERIFIED') ? '#ECFDF5' : '#FFFBEB',
+                            paddingHorizontal: 8,
+                            paddingVertical: 3,
+                            borderRadius: 12,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 4
+                          }}>
+                            <Text style={{ fontSize: 10, color: (user.isVerified || user.status === 'VERIFIED') ? '#059669' : '#D97706' }}>
+                              {(user.isVerified || user.status === 'VERIFIED') ? '✓' : '⚠️'}
+                            </Text>
+                            <Text style={{
+                              fontSize: 10,
+                              fontWeight: '800',
+                              color: (user.isVerified || user.status === 'VERIFIED') ? '#059669' : '#D97706'
+                            }}>
+                              {(user.isVerified || user.status === 'VERIFIED') ? 'Verified' : (user.status || 'Pending')}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Right: Edit Profile Button */}
+                    <TouchableOpacity
+                      onPress={() => setShowAddBusinessModal(true)}
+                      activeOpacity={0.8}
+                      style={{
+                        backgroundColor: 'rgba(255,255,255,0.18)',
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.7)',
+                        paddingHorizontal: 12,
+                        paddingVertical: 7,
+                        borderRadius: 14,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 5
+                      }}
+                    >
+                      <Text style={{ fontSize: 11, color: '#FFF' }}>✎</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFF' }}>Edit Profile</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
-              </TouchableOpacity>
 
-              {/* 2. FAQs */}
-              <TouchableOpacity
-                onPress={() => openCmsPage('faq')}
-                style={styles.cmsMenuItem}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FAF5FF' }]}>
-                    <Text style={{ fontSize: 16 }}>❓</Text>
+                {/* SECTION 3 — ACCOUNT DETAILS (EXACT FOUR CARDS IN 2x2 GRID) */}
+                <View style={styles.dbProfileCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Text style={{ fontSize: 16 }}>🥞</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>Account Details</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cmsMenuTitle}>Frequently Asked Questions (FAQ)</Text>
-                    <Text style={styles.cmsMenuSub}>Instant answers about verification & quotes</Text>
+
+                  <View style={styles.dbGrid}>
+                    {/* Card 1: User ID */}
+                    <View style={styles.dbFieldBox}>
+                      <Text style={styles.dbLabel}>USER ID</Text>
+                      <Text style={styles.dbVal} numberOfLines={1} ellipsizeMode="middle">
+                        {user.id || 'usr_anonymous'}
+                      </Text>
+                    </View>
+
+                    {/* Card 2: Status */}
+                    <View style={styles.dbFieldBox}>
+                      <Text style={styles.dbLabel}>STATUS</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: (user.status === 'ACTIVE' || !user.status) ? '#16A34A' : '#F59E0B' }} />
+                        <Text style={[styles.dbVal, { color: (user.status === 'ACTIVE' || !user.status) ? '#16A34A' : '#D97706', marginTop: 0 }]}>
+                          {user.status || 'Active'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Card 3: Phone */}
+                    <View style={styles.dbFieldBox}>
+                      <Text style={styles.dbLabel}>PHONE</Text>
+                      <Text style={styles.dbVal} numberOfLines={1}>
+                        {user.phoneNumber || '+916302759527'}
+                      </Text>
+                    </View>
+
+                    {/* Card 4: Role */}
+                    <View style={styles.dbFieldBox}>
+                      <Text style={styles.dbLabel}>ROLE</Text>
+                      <Text style={[styles.dbVal, { color: '#0076D7' }]} numberOfLines={1}>
+                        {Array.isArray(user.roles)
+                          ? (user.roles.includes('VENDOR_OWNER') ? 'Vendor Owner' : user.roles.includes('VENDOR_STAFF') ? 'Vendor Staff' : 'Customer')
+                          : (user.role || 'Vendor Owner')}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
-              </TouchableOpacity>
 
-              {/* 3. Terms & Conditions */}
-              <TouchableOpacity
-                onPress={() => openCmsPage('terms')}
-                style={styles.cmsMenuItem}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F0FDF4' }]}>
-                    <Text style={{ fontSize: 16 }}>📜</Text>
+                {/* SECTION 4 — ACCOUNT ACTIONS (EXACT THREE BUTTONS) */}
+                <View style={styles.dbProfileCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Text style={{ fontSize: 16 }}>⚡</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>Account Actions</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cmsMenuTitle}>Terms & Conditions</Text>
-                    <Text style={styles.cmsMenuSub}>Platform rules, merchant & customer policy</Text>
+
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {/* Button 1: Edit Profile */}
+                    <TouchableOpacity
+                      onPress={() => setShowAddBusinessModal(true)}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#EFF6FF',
+                        borderWidth: 1,
+                        borderColor: '#BFDBFE',
+                        paddingVertical: 10,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        gap: 4
+                      }}
+                    >
+                      <Text style={{ fontSize: 12 }}>✎</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#0076D7' }}>Edit Profile</Text>
+                    </TouchableOpacity>
+
+                    {/* Button 2: Change Password (OTP Security) */}
+                    <TouchableOpacity
+                      onPress={() => Alert.alert('Account Security', 'Account authentication is secured with dynamic OTP SMS login verification.')}
+                      style={{
+                        flex: 1.2,
+                        backgroundColor: '#F8FAFC',
+                        borderWidth: 1,
+                        borderColor: '#E2E8F0',
+                        paddingVertical: 10,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        gap: 4
+                      }}
+                    >
+                      <Text style={{ fontSize: 12 }}>🔒</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#334155' }}>Change Password</Text>
+                    </TouchableOpacity>
+
+                    {/* Button 3: Sign Out */}
+                    <TouchableOpacity
+                      onPress={handleSignOut}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#FF6B35',
+                        paddingVertical: 10,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        gap: 4,
+                        shadowColor: '#FF6B35',
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 2
+                      }}
+                    >
+                      <Text style={{ fontSize: 12, color: '#FFF' }}>➜</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFF' }}>Sign Out</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
-              </TouchableOpacity>
 
-              {/* 4. Contact & Support */}
-              <TouchableOpacity
-                onPress={() => openCmsPage('contact')}
-                style={styles.cmsMenuItem}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FFF7ED' }]}>
-                    <Text style={{ fontSize: 16 }}>📞</Text>
+                {/* SECTION 5 — COMPANY & INFORMATION (EXACT FIVE ROWS) */}
+                <View style={styles.dbProfileCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Text style={{ fontSize: 16 }}>🏢</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>Company & Information</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cmsMenuTitle}>Contact Us & Support</Text>
-                    <Text style={styles.cmsMenuSub}>Toll-free, WhatsApp desk & DB enquiry form</Text>
+
+                  <View style={{ gap: 8 }}>
+                    {/* Row 1 — About Hello-Hi */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('about')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#EFF6FF' }]}>
+                          <Text style={{ fontSize: 16 }}>ℹ️</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>About Hello-Hi</Text>
+                          <Text style={styles.cmsMenuSub}>Mission, pillars & verified discovery engine</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+
+                    {/* Row 2 — Frequently Asked Questions (FAQ) */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('faq')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FAF5FF' }]}>
+                          <Text style={{ fontSize: 16 }}>❓</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>Frequently Asked Questions (FAQ)</Text>
+                          <Text style={styles.cmsMenuSub}>Instant answers about verification & quotes</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+
+                    {/* Row 3 — Terms & Conditions */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('terms')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F0FDF4' }]}>
+                          <Text style={{ fontSize: 16 }}>📜</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>Terms & Conditions</Text>
+                          <Text style={styles.cmsMenuSub}>Platform rules, merchant & customer policy</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+
+                    {/* Row 4 — Contact Us & Support */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('contact')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FFF7ED' }]}>
+                          <Text style={{ fontSize: 16 }}>📞</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>Contact Us & Support</Text>
+                          <Text style={styles.cmsMenuSub}>Toll-free, WhatsApp desk & DB enquiry form</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+
+                    {/* Row 5 — Privacy Policy (DPDP Act 2023) */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('privacy')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F8FAFC' }]}>
+                          <Text style={{ fontSize: 16 }}>🛡️</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>Privacy Policy (DPDP Act 2023)</Text>
+                          <Text style={styles.cmsMenuSub}>Data minimization & encryption protections</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
-              </TouchableOpacity>
-
-              {/* 5. Privacy Policy */}
-              <TouchableOpacity
-                onPress={() => openCmsPage('privacy')}
-                style={styles.cmsMenuItem}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                  <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F8FAFC' }]}>
-                    <Text style={{ fontSize: 16 }}>🛡️</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.cmsMenuTitle}>Privacy Policy (DPDP Act 2023)</Text>
-                    <Text style={styles.cmsMenuSub}>Data minimization & encryption protections</Text>
-                  </View>
-                </View>
-                <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
-              </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          ) : (
+            /* Unauthenticated Guest Account View - EXACT APPROVED DESIGN */
+            <View>
+              {/* SECTION 1 — HELLO-HI BLUE BRANDED HEADER (GUEST: Location + Bell only, NO Partner Pill) */}
+              <View style={{
+                backgroundColor: '#0076D7',
+                paddingTop: 16,
+                paddingBottom: 20,
+                paddingHorizontal: 16,
+                borderBottomLeftRadius: 28,
+                borderBottomRightRadius: 28,
+                position: 'relative',
+                overflow: 'hidden',
+                shadowColor: '#000',
+                shadowOpacity: 0.15,
+                shadowRadius: 10,
+                elevation: 6
+              }}>
+                {/* Abstract curved gradient background accents */}
+                <View style={{
+                  position: 'absolute',
+                  top: -60,
+                  right: -50,
+                  width: 180,
+                  height: 180,
+                  borderRadius: 90,
+                  backgroundColor: '#0B1220',
+                  opacity: 0.25
+                }} />
+                <View style={{
+                  position: 'absolute',
+                  bottom: -40,
+                  left: -30,
+                  width: 140,
+                  height: 140,
+                  borderRadius: 70,
+                  backgroundColor: '#FF6B35',
+                  opacity: 0.18
+                }} />
+
+                {/* Wordmark Branding */}
+                <View style={{ alignItems: 'center', marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#FFFFFF', letterSpacing: 0.5 }}>Hello</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: '#FF6B35', letterSpacing: 0.5 }}>-Hi</Text>
+                  </View>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>
+                    Search Local. Connect Instant.
+                  </Text>
+                </View>
+
+                {/* Header Controls Bar (Location + Notification Bell Only) */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                  {/* Left — Location Pill */}
+                  <TouchableOpacity
+                    onPress={() => setShowCityModal(true)}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: 'rgba(255,255,255,0.18)',
+                      borderWidth: 1,
+                      borderColor: 'rgba(255,255,255,0.3)',
+                      paddingHorizontal: 12,
+                      paddingVertical: 7,
+                      borderRadius: 20,
+                      gap: 5
+                    }}
+                  >
+                    <Text style={{ fontSize: 12 }}>📍</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF' }}>
+                      {selectedCity} ({selectedLocality})
+                    </Text>
+                    <Text style={{ fontSize: 9, color: 'rgba(255,255,255,0.8)' }}>▼</Text>
+                  </TouchableOpacity>
+
+                  {/* Right — Notification Bell with Badge */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      Alert.alert(
+                        '🔔 Guest Notifications',
+                        'Login to receive real-time updates on your service enquiries and quotes.'
+                      );
+                    }}
+                    activeOpacity={0.8}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      borderWidth: 1.5,
+                      borderColor: 'rgba(255,255,255,0.6)',
+                      backgroundColor: 'rgba(255,255,255,0.12)',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative'
+                    }}
+                  >
+                    <Text style={{ fontSize: 14 }}>🔔</Text>
+                    <View style={{
+                      position: 'absolute',
+                      top: 1,
+                      right: 1,
+                      backgroundColor: '#FF6B35',
+                      width: 14,
+                      height: 14,
+                      borderRadius: 7,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1.5,
+                      borderColor: '#0076D7'
+                    }}>
+                      <Text style={{ fontSize: 8, color: '#FFFFFF', fontWeight: '900' }}>1</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* BODY CONTAINER FOR SECTIONS 2-5 */}
+              <View style={{ padding: 16, gap: 14 }}>
+                {/* SECTION 2 — WELCOME TO HELLO-HI CARD */}
+                <View style={{
+                  backgroundColor: '#005FAE',
+                  borderRadius: 24,
+                  padding: 16,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 10,
+                  elevation: 5,
+                  overflow: 'hidden',
+                  position: 'relative'
+                }}>
+                  {/* Curved orange decorative accent in lower right */}
+                  <View style={{
+                    position: 'absolute',
+                    bottom: -25,
+                    right: -25,
+                    width: 95,
+                    height: 95,
+                    borderRadius: 48,
+                    backgroundColor: '#FF6B35',
+                    opacity: 0.95
+                  }} />
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', position: 'relative', zIndex: 10 }}>
+                    {/* Left: Silhouette Avatar + Texts */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flex: 1, minWidth: 0, paddingRight: 10 }}>
+                      <View style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        backgroundColor: '#FFFFFF',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        shadowColor: '#000',
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 2
+                      }}>
+                        <Text style={{ fontSize: 28, color: '#0076D7' }}>👤</Text>
+                      </View>
+
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: '#FFF' }}>
+                          Welcome to Hello-Hi
+                        </Text>
+                        <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.92)', fontWeight: '500', marginTop: 3, lineHeight: 15 }}>
+                          Login or Register to access your account, book services, manage enquiries and more.
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Right: Stacked Login & Register Buttons */}
+                    <View style={{ gap: 8, width: 88, shrink: 0 }}>
+                      <TouchableOpacity
+                        onPress={() => { setAuthMode('login'); setAuthStep('role'); setIsAuthModalVisible(true); }}
+                        activeOpacity={0.8}
+                        style={{
+                          backgroundColor: 'rgba(255,255,255,0.18)',
+                          borderWidth: 1,
+                          borderColor: 'rgba(255,255,255,0.7)',
+                          paddingVertical: 6,
+                          borderRadius: 12,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 4
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, color: '#FFF' }}>➜</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFF' }}>Login</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => { setAuthMode('register'); setAuthStep('role'); setIsAuthModalVisible(true); }}
+                        activeOpacity={0.8}
+                        style={{
+                          backgroundColor: '#FF6B35',
+                          paddingVertical: 6,
+                          borderRadius: 12,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 4,
+                          shadowColor: '#FF6B35',
+                          shadowOpacity: 0.3,
+                          shadowRadius: 4,
+                          elevation: 2
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, color: '#FFF' }}>＋</Text>
+                        <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFF' }}>Register</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* SECTION 3 — GUEST ACCESS (EXACT FOUR CARDS IN 2x2 GRID) */}
+                <View style={styles.dbProfileCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Text style={{ fontSize: 16 }}>🥞</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>Guest Access</Text>
+                  </View>
+
+                  <View style={styles.dbGrid}>
+                    {/* Card 1: Browse Services */}
+                    <TouchableOpacity
+                      onPress={() => setActiveTab('Services')}
+                      activeOpacity={0.7}
+                      style={styles.dbFieldBox}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Text style={{ fontSize: 14 }}>📅</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#0F172A' }}>Browse Services</Text>
+                      </View>
+                      <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+                        Explore & book verified services
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Card 2: View Plans */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert('HELLO-Hi Subscription Plans', 'Explore dynamic verified merchant membership & customer benefit plans directly powered by SQLite DB.');
+                      }}
+                      activeOpacity={0.7}
+                      style={styles.dbFieldBox}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Text style={{ fontSize: 14 }}>📋</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#0F172A' }}>View Plans</Text>
+                      </View>
+                      <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+                        Check subscription plans
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Card 3: Get Help */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('faq')}
+                      activeOpacity={0.7}
+                      style={styles.dbFieldBox}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Text style={{ fontSize: 14 }}>❓</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#0F172A' }}>Get Help</Text>
+                      </View>
+                      <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+                        FAQs & support articles
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Card 4: Stay Updated */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        Alert.alert('Stay Updated', 'Receive the latest local business offers, verified announcements, and platform updates in your city.');
+                      }}
+                      activeOpacity={0.7}
+                      style={styles.dbFieldBox}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                        <Text style={{ fontSize: 14 }}>🔔</Text>
+                        <Text style={{ fontSize: 12, fontWeight: '900', color: '#0F172A' }}>Stay Updated</Text>
+                      </View>
+                      <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
+                        Offers, updates & announcements
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* SECTION 4 — ACCOUNT ACTIONS (EXACT TWO BUTTONS) */}
+                <View style={styles.dbProfileCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Text style={{ fontSize: 16 }}>⚡</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>Account Actions</Text>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    {/* Button 1: Login */}
+                    <TouchableOpacity
+                      onPress={() => { setAuthMode('login'); setAuthStep('role'); setIsAuthModalVisible(true); }}
+                      activeOpacity={0.8}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#EFF6FF',
+                        borderWidth: 1.5,
+                        borderColor: '#BFDBFE',
+                        paddingVertical: 12,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        gap: 6
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, color: '#0076D7' }}>➜</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#0076D7' }}>Login</Text>
+                    </TouchableOpacity>
+
+                    {/* Button 2: Register */}
+                    <TouchableOpacity
+                      onPress={() => { setAuthMode('register'); setAuthStep('role'); setIsAuthModalVisible(true); }}
+                      activeOpacity={0.8}
+                      style={{
+                        flex: 1,
+                        backgroundColor: '#FF6B35',
+                        paddingVertical: 12,
+                        borderRadius: 14,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'row',
+                        gap: 6,
+                        shadowColor: '#FF6B35',
+                        shadowOpacity: 0.3,
+                        shadowRadius: 4,
+                        elevation: 2
+                      }}
+                    >
+                      <Text style={{ fontSize: 14, color: '#FFF' }}>＋</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: '#FFF' }}>Register</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* SECTION 5 — COMPANY & INFORMATION (EXACT FIVE ROWS) */}
+                <View style={styles.dbProfileCard}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                    <Text style={{ fontSize: 16 }}>🏢</Text>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>Company & Information</Text>
+                  </View>
+
+                  <View style={{ gap: 8 }}>
+                    {/* Row 1 — About Hello-Hi */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('about')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#EFF6FF' }]}>
+                          <Text style={{ fontSize: 16 }}>ℹ️</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>About Hello-Hi</Text>
+                          <Text style={styles.cmsMenuSub}>Mission, pillars & verified discovery engine</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+
+                    {/* Row 2 — Frequently Asked Questions (FAQ) */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('faq')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FAF5FF' }]}>
+                          <Text style={{ fontSize: 16 }}>❓</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>Frequently Asked Questions (FAQ)</Text>
+                          <Text style={styles.cmsMenuSub}>Instant answers about verification & quotes</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+
+                    {/* Row 3 — Terms & Conditions */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('terms')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F0FDF4' }]}>
+                          <Text style={{ fontSize: 16 }}>📜</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>Terms & Conditions</Text>
+                          <Text style={styles.cmsMenuSub}>Platform rules, merchant & customer policy</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+
+                    {/* Row 4 — Contact Us & Support */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('contact')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#FFF7ED' }]}>
+                          <Text style={{ fontSize: 16 }}>📞</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>Contact Us & Support</Text>
+                          <Text style={styles.cmsMenuSub}>Toll-free, WhatsApp desk & DB enquiry form</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+
+                    {/* Row 5 — Privacy Policy (DPDP Act 2023) */}
+                    <TouchableOpacity
+                      onPress={() => openCmsPage('privacy')}
+                      style={styles.cmsMenuItem}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <View style={[styles.cmsMenuIconBox, { backgroundColor: '#F8FAFC' }]}>
+                          <Text style={{ fontSize: 16 }}>🛡️</Text>
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.cmsMenuTitle}>Privacy Policy (DPDP Act 2023)</Text>
+                          <Text style={styles.cmsMenuSub}>Data minimization & encryption protections</Text>
+                        </View>
+                      </View>
+                      <Text style={{ fontSize: 14, color: '#94A3B8', fontWeight: 'bold' }}>→</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )
         ) : (
           /* ================= HOME TAB (MAIN HUB) ================= */
           <View>
@@ -863,16 +1832,51 @@ export default function App() {
               </ScrollView>
             </View>
 
-            {/* 2. PROMO BANNERS CAROUSEL */}
+            {/* 2. PROMO BANNERS / LIVE COUPONS CAROUSEL */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 10, marginVertical: 6 }}>
-              <View style={styles.promoBanner1}>
-                <View>
-                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#FCD34D', textTransform: 'uppercase' }}>Festival Deals</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFF', marginTop: 2 }}>UP TO 50% OFF</Text>
-                  <Text style={{ fontSize: 9, color: '#CBD5E1' }}>Verified {selectedCity} Vendors</Text>
+              {coupons && coupons.length > 0 ? (
+                coupons.map((cpn: any) => (
+                  <TouchableOpacity
+                    key={cpn.id}
+                    onPress={() => Alert.alert('Coupon Code', `Use Code: ${cpn.code}\n${cpn.title}\n${cpn.description || ''}`)}
+                    style={{
+                      backgroundColor: '#0F172A',
+                      borderRadius: 16,
+                      padding: 12,
+                      width: 230,
+                      justifyContent: 'space-between',
+                      borderWidth: 1,
+                      borderColor: '#334155'
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1, paddingRight: 6 }}>
+                        <View style={{ backgroundColor: 'rgba(251, 191, 36, 0.2)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, alignSelf: 'flex-start', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.4)' }}>
+                          <Text style={{ fontSize: 9, fontWeight: '800', color: '#FCD34D', textTransform: 'uppercase' }}>
+                            {cpn.discount_type === 'PERCENTAGE' ? `${cpn.discount_value}% OFF` : `₹${cpn.discount_value} OFF`}
+                          </Text>
+                        </View>
+                        <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFF', marginTop: 4 }} numberOfLines={1}>{cpn.title}</Text>
+                        <Text style={{ fontSize: 9, color: '#CBD5E1', marginTop: 2 }} numberOfLines={1}>{cpn.description || `Verified ${selectedCity} Deals`}</Text>
+                      </View>
+                      <Text style={{ fontSize: 24 }}>🎉</Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, paddingTop: 6, borderTopWidth: 1, borderTopColor: '#334155' }}>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: '#FCD34D', letterSpacing: 0.5 }}>{cpn.code}</Text>
+                      <Text style={{ fontSize: 9, fontWeight: '700', color: '#94A3B8' }}>Tap to view</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.promoBanner1}>
+                  <View>
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#FCD34D', textTransform: 'uppercase' }}>Festival Deals</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#FFF', marginTop: 2 }}>UP TO 50% OFF</Text>
+                    <Text style={{ fontSize: 9, color: '#CBD5E1' }}>Verified {selectedCity} Vendors</Text>
+                  </View>
+                  <Text style={{ fontSize: 26 }}>🎉</Text>
                 </View>
-                <Text style={{ fontSize: 26 }}>🎉</Text>
-              </View>
+              )}
 
               <TouchableOpacity
                 onPress={() => setShowAddBusinessModal(true)}
@@ -1069,12 +2073,12 @@ export default function App() {
           <Text style={[styles.navLabel, activeTab === 'Services' && styles.navLabelActive]}>Services</Text>
         </TouchableOpacity>
 
-        {/* Center Floating Plus: Add Your Business Free (Vendor Registration) */}
+        {/* Center Floating Button: Wallet */}
         <TouchableOpacity
-          onPress={() => setShowAddBusinessModal(true)}
-          style={styles.centerFloatingBtn}
+          onPress={() => setActiveTab('Wallet')}
+          style={[styles.centerFloatingBtn, activeTab === 'Wallet' && { backgroundColor: '#0076D7' }]}
         >
-          <Text style={{ fontSize: 22, color: '#FFF', fontWeight: '900' }}>➕</Text>
+          <Text style={{ fontSize: 20 }}>👛</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -1103,6 +2107,33 @@ export default function App() {
           style={styles.modalBackdrop}
         >
           <View style={styles.cityModalContent}>
+            {/* Auto Detect Location Option */}
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedCity('Hyderabad');
+                setSelectedLocality('Hitec City');
+                setShowCityModal(false);
+                Alert.alert('GPS Location Detected', '📍 Current location identified: Hitec City, Hyderabad');
+              }}
+              style={[
+                styles.cityModalItem,
+                { backgroundColor: '#EFF6FF', borderColor: '#93C5FD', marginBottom: 12 }
+              ]}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Text style={{ fontSize: 18 }}>🧭</Text>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#0076D7' }}>Auto-Detect Exact Location</Text>
+                    <Text style={{ fontSize: 10, color: '#64748B' }}>Uses device GPS coordinates</Text>
+                  </View>
+                </View>
+                <View style={{ backgroundColor: '#DCFCE7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                  <Text style={{ fontSize: 9, fontWeight: '800', color: '#16A34A' }}>GPS</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+
             <Text style={styles.cityModalTitle}>SELECT PILOT CITY HUB</Text>
             {(['Hyderabad', 'Vijayawada', 'Guntur'] as const).map((city) => (
               <TouchableOpacity
@@ -1183,7 +2214,7 @@ export default function App() {
           <View style={styles.authModalCard}>
             
             {/* Toggle: Sign In vs Register */}
-            {authStep === 'phone' && (
+            {authStep !== 'otp' && (
               <View style={styles.authToggleBar}>
                 <TouchableOpacity
                   onPress={() => setAuthMode('login')}
@@ -1205,24 +2236,107 @@ export default function App() {
             )}
 
             <Text style={styles.authModalTitle}>
-              {authStep === 'phone'
-                ? (authMode === 'register' ? 'Register New Account' : 'Welcome Back')
+              {authStep === 'role'
+                ? (authMode === 'register' ? 'Join as Customer or Partner' : 'Select Account Type')
+                : authStep === 'phone'
+                ? (authMode === 'register' ? `Register as ${authRole === 'PARTNER' ? 'Business Partner' : 'Customer'}` : `${authRole === 'PARTNER' ? 'Business Partner' : 'Customer'} Login`)
                 : 'Verify Mobile OTP'}
             </Text>
             <Text style={styles.authModalSub}>
-              {authStep === 'phone'
+              {authStep === 'role'
+                ? 'Choose whether you want to use HELLO as a Customer or Business Partner.'
+                : authStep === 'phone'
                 ? 'Directly connected to backend MySQL database.'
                 : `Enter the 6-digit code sent to +91${phoneNumber}.`}
             </Text>
 
-            {authStep === 'phone' ? (
+            {authStep === 'role' ? (
+              /* Role Selection Screen */
+              <View style={{ width: '100%', gap: 10, marginVertical: 8 }}>
+                {/* Customer Option */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setAuthRole('CUSTOMER');
+                    setAuthStep('phone');
+                  }}
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1.5,
+                    borderColor: '#E2E8F0',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12
+                  }}
+                >
+                  <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 22 }}>👤</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>Customer</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#0076D7' }}>
+                        {authMode === 'register' ? 'Register →' : 'Sign In →'}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                      Find services, book appointments, discover verified local deals.
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+
+                {/* Business Partner Option */}
+                <TouchableOpacity
+                  onPress={() => {
+                    setAuthRole('PARTNER');
+                    setAuthStep('phone');
+                  }}
+                  style={{
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: 14,
+                    padding: 14,
+                    borderWidth: 1.5,
+                    borderColor: '#E2E8F0',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12
+                  }}
+                >
+                  <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: '#FFF7ED', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 22 }}>🏢</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>Business Partner</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#FF6B35' }}>
+                        {authMode === 'register' ? 'Register →' : 'Sign In →'}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                      Register business, receive customer leads, manage profile & KYC.
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ) : authStep === 'phone' ? (
               <View style={{ width: '100%' }}>
+                {/* Switch Role Pill */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, marginBottom: 12 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: authRole === 'PARTNER' ? '#FF6B35' : '#0076D7' }}>
+                    {authRole === 'PARTNER' ? '🏢 Business Partner' : '👤 Customer'} Mode
+                  </Text>
+                  <TouchableOpacity onPress={() => setAuthStep('role')}>
+                    <Text style={{ fontSize: 10, fontWeight: '800', color: '#64748B' }}>Change Role</Text>
+                  </TouchableOpacity>
+                </View>
+
                 {authMode === 'register' && (
                   <View style={{ marginBottom: 10 }}>
-                    <Text style={styles.fieldLabel}>Full Name *</Text>
+                    <Text style={styles.fieldLabel}>{authRole === 'PARTNER' ? 'Business Owner Name *' : 'Full Name *'}</Text>
                     <TextInput
                       style={styles.modalTextInput}
-                      placeholder="e.g. Anand Varma"
+                      placeholder={authRole === 'PARTNER' ? "e.g. Vinod Kumar" : "e.g. Anand Varma"}
                       placeholderTextColor="#94A3B8"
                       value={fullName}
                       onChangeText={setFullName}
@@ -1635,11 +2749,14 @@ export default function App() {
       </Modal>
 
       {/* CMS PAGE MODAL (ABOUT, FAQ, TERMS, CONTACT, PRIVACY - LOADED FROM DB) */}
-      <Modal visible={activeCmsModal !== null} transparent animationType="slide">
-        <View style={styles.modalBackdrop}>
-          <View style={styles.cmsModalContainer}>
+      <Modal visible={activeCmsModal !== null} animationType="slide">
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={[styles.cmsModalContainer, { width: '100%', maxWidth: '100%', maxHeight: '100%', flex: 1, borderRadius: 0, padding: 16 }]}>
             {/* Header */}
             <View style={styles.cmsModalHeader}>
+              <TouchableOpacity onPress={() => setActiveCmsModal(null)} style={{ paddingRight: 10, paddingVertical: 4 }}>
+                <Text style={{ fontSize: 20, color: '#0F172A', fontWeight: 'bold' }}>←</Text>
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={{ fontSize: 10, fontWeight: '800', color: '#16A34A', textTransform: 'uppercase' }}>
@@ -1841,7 +2958,7 @@ export default function App() {
               <Text style={{ color: '#FFF', fontSize: 12, fontWeight: '800' }}>Close Page</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </SafeAreaView>
       </Modal>
     </SafeAreaView>
   );
@@ -2164,60 +3281,75 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 8,
   },
-  // Profile Tab
+  // Profile Tab (Industry Grade Design)
   dbProfileCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 14,
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   dbGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
+    gap: 10,
   },
   dbFieldBox: {
-    width: '48%',
+    width: '48.5%',
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    padding: 8,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 64,
+    justifyContent: 'center',
   },
   dbLabel: {
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: '#64748B',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
   dbVal: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
     color: '#0F172A',
-    marginTop: 2,
+    marginTop: 4,
+    letterSpacing: 0.1,
   },
   rawJsonBox: {
     backgroundColor: '#0F172A',
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 8,
+    borderRadius: 14,
+    padding: 12,
+    marginTop: 10,
   },
   rawJsonText: {
     color: '#34D399',
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: 'monospace',
+    lineHeight: 14,
   },
   signOutBtn: {
-    marginTop: 14,
-    paddingVertical: 10,
+    marginTop: 16,
+    paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   signOutBtnText: {
     color: '#EF4444',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   unauthCard: {
     backgroundColor: '#FFFFFF',

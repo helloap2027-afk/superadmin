@@ -29,6 +29,8 @@ export interface ToastOptions {
   duration?: number; // In ms, default 4000
   position?: ToastPosition;
   customColors?: Partial<ToastColorConfig>;
+  actionUrl?: string;
+  onClick?: () => void;
 }
 
 export interface ToastItem extends ToastOptions {
@@ -272,7 +274,18 @@ export function ToastProvider({
           return (
             <div
               key={item.id}
-              className={`pointer-events-auto w-full rounded-2xl border p-3.5 shadow-2xl flex items-start gap-3 relative overflow-hidden transition-all duration-300 transform translate-y-0 opacity-100 hover:scale-[1.02] ${bgClass} ${borderClass}`}
+              onClick={() => {
+                if (item.onClick) {
+                  item.onClick();
+                  dismissToast(item.id);
+                } else if (item.actionUrl && typeof window !== "undefined") {
+                  window.location.href = item.actionUrl;
+                  dismissToast(item.id);
+                }
+              }}
+              className={`pointer-events-auto w-full rounded-2xl border p-3.5 shadow-2xl flex items-start gap-3 relative overflow-hidden transition-all duration-300 transform translate-y-0 opacity-100 hover:scale-[1.02] ${
+                item.onClick || item.actionUrl ? "cursor-pointer" : ""
+              } ${bgClass} ${borderClass}`}
               role="alert"
             >
               {/* Status Icon */}

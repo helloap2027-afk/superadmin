@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -262,14 +262,25 @@ function OtpFormStep({
       message: `Logged in successfully via Google as ${roleLabel}.`,
       duration: 4500,
     });
-    router.push(isPartner ? "/vendor/dashboard" : "/");
+    router.push("/");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isRegister && !fullName.trim()) {
-      setError(isPartner ? "Please enter Partner / Owner Full Name." : "Please enter your Full Name.");
-      return;
+    if (isRegister) {
+      if (!fullName.trim()) {
+        setError(isPartner ? "Please enter Partner / Owner Full Name." : "Please enter your Full Name.");
+        return;
+      }
+      if (!email.trim()) {
+        setError("Please enter your Email Address.");
+        return;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.trim())) {
+        setError("Please enter a valid email address (e.g. name@example.com).");
+        return;
+      }
     }
     if (phoneNumber.length !== 10) {
       setError("Please enter a valid 10-digit Indian mobile number.");
@@ -386,7 +397,7 @@ function OtpFormStep({
       if (devOtp) sessionStorage.setItem("hello_auth_dev_otp", devOtp);
 
       // Navigate to verify-otp with intent & returnTo
-      const returnTo = isPartner ? "/vendor/dashboard" : "/";
+      const returnTo = "/";
       router.push(
         `/verify-otp?phone=${encodeURIComponent(fullPhone)}&challengeId=${encodeURIComponent(challengeId)}${
           devOtp ? `&devOtp=${encodeURIComponent(devOtp)}` : ""
@@ -459,10 +470,11 @@ function OtpFormStep({
 
             <div>
               <label className="block text-[10px] font-bold text-slate-700 mb-0.5">
-                Email (Optional)
+                Email Address *
               </label>
               <input
                 type="email"
+                required
                 placeholder={isPartner ? "partner@yourbusiness.in" : "you@example.com"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -565,11 +577,24 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawMode = searchParams.get("mode");
+  const rawRole = searchParams.get("role");
   const mode: AuthMode = rawMode === "register" ? "register" : "login";
 
   // step: "select" = role selection, "otp" = phone form
-  const [step, setStep] = useState<"select" | "otp">("select");
-  const [selectedRole, setSelectedRole] = useState<AccountRole>(null);
+  const initialRole: AccountRole = rawRole?.toUpperCase() === "PARTNER" ? "PARTNER" : rawRole?.toUpperCase() === "CUSTOMER" ? "CUSTOMER" : null;
+  const [step, setStep] = useState<"select" | "otp">(initialRole ? "otp" : "select");
+  const [selectedRole, setSelectedRole] = useState<AccountRole>(initialRole);
+
+  // Sync role if query param changes
+  useEffect(() => {
+    if (rawRole?.toUpperCase() === "PARTNER") {
+      setSelectedRole("PARTNER");
+      setStep("otp");
+    } else if (rawRole?.toUpperCase() === "CUSTOMER") {
+      setSelectedRole("CUSTOMER");
+      setStep("otp");
+    }
+  }, [rawRole]);
 
   const handleRoleSelect = (role: AccountRole) => {
     setSelectedRole(role);

@@ -302,7 +302,7 @@ export default function CustomersPage() {
                       <th className="py-3 px-4">Contact</th>
                       <th className="py-3 px-4">Enquiries</th>
                       <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4">Joined Date</th>
+                      <th className="py-3 px-4">Registered Date &amp; Time</th>
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -334,7 +334,7 @@ export default function CustomersPage() {
                                 >
                                   {item.name || "Customer Account"}
                                 </Link>
-                                <div className="font-mono text-[10px] text-slate-400">{item.id}</div>
+                                <div className="text-[11px] text-slate-500 font-medium">{item.email || "No email provided"}</div>
                               </div>
                             </div>
                           </td>
@@ -364,8 +364,13 @@ export default function CustomersPage() {
                               {item.status}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-slate-500 text-[11px]">
-                            {item.joined ? new Date(item.joined).toLocaleDateString("en-IN", { month: "short", day: "numeric", year: "numeric" }) : "N/A"}
+                          <td className="py-3 px-4">
+                            <div className="font-medium text-slate-800 text-[11px]">
+                              {item.joined ? new Date(item.joined).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "N/A"}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              {item.joined ? new Date(item.joined).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }) : ""}
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-1">

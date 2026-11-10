@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Zap, ChevronRight, CheckCircle, Flame } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Zap, ChevronRight, CheckCircle, Flame, Ticket, Copy } from "lucide-react";
 import { TRENDING_LOCAL_TOPICS } from "../data/exploreData";
+import { toast } from "./Toast";
 
 export interface DesktopRightSidebarProps {
   selectedCity: string;
@@ -23,6 +24,19 @@ export function DesktopRightSidebar({
   const [dealDispatchedRef, setDealDispatchedRef] = useState<string | null>(null);
   const [matchedVendorsCount, setMatchedVendorsCount] = useState<number>(3);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("http://localhost:4000/api/v1/coupons")
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.success && Array.isArray(json.data)) {
+          setCoupons(json.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const trendingList = TRENDING_LOCAL_TOPICS[selectedCity] || TRENDING_LOCAL_TOPICS["Hyderabad"];
 
@@ -71,7 +85,7 @@ export function DesktopRightSidebar({
   };
 
   return (
-    <div className="space-y-4 max-h-[calc(100vh-7.5rem)] overflow-y-auto overscroll-contain">
+    <div className="space-y-4 sticky top-28">
       
       {/* 1. INSTANT BEST DEAL QUOTES CARD (Matching Screenshot) */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs space-y-3.5">
@@ -208,7 +222,80 @@ export function DesktopRightSidebar({
         )}
       </div>
 
-      {/* 2. TRENDING IN HYDERABAD CARD (Matching Screenshot) */}
+      {/* 2. LIVE ACTIVE COUPONS & FESTIVAL DEALS (DIRECT FROM DB) */}
+      {coupons && coupons.length > 0 && (
+        <div className="bg-gradient-to-br from-[#0B1220] via-slate-900 to-[#1E293B] rounded-2xl p-4 shadow-sm text-white space-y-3 border border-slate-800">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Ticket className="w-4 h-4 text-amber-400" />
+              <h4 className="text-xs font-black tracking-tight text-white">Festival Deals &amp; Coupons</h4>
+            </div>
+            <span className="bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[9px] font-black px-1.5 py-0.5 rounded-full uppercase">
+              LIVE
+            </span>
+          </div>
+
+          <div className="space-y-2.5">
+            {coupons.map((cpn) => (
+              <div
+                key={cpn.id}
+                className="bg-white/5 hover:bg-white/10 rounded-xl p-3 border border-white/10 transition group"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="text-[9px] font-black uppercase tracking-wider text-amber-400 block truncate">
+                      {cpn.category || "Exclusive Deal"}
+                    </span>
+                    <h5 className="text-xs font-black leading-tight text-white mt-0.5 truncate">
+                      {cpn.title}
+                    </h5>
+                    <p className="text-[10px] text-slate-300 line-clamp-1 mt-0.5">
+                      {cpn.description}
+                    </p>
+                  </div>
+                  <span className="text-xl shrink-0">
+                    {cpn.discount_type === "PERCENTAGE" ? "🎉" : "🏷️"}
+                  </span>
+                </div>
+
+                <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] text-slate-400 uppercase font-semibold">Code:</span>
+                    <span className="font-mono text-xs font-black text-amber-300 tracking-wider">
+                      {cpn.code}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (typeof navigator !== "undefined" && navigator.clipboard) {
+                        navigator.clipboard.writeText(cpn.code);
+                        setCopiedCode(cpn.code);
+                        toast.success(`Copied code "${cpn.code}"!`);
+                        setTimeout(() => setCopiedCode(null), 2500);
+                      }
+                    }}
+                    className="text-[10px] font-bold bg-[#FF6B35] hover:bg-[#E5531E] text-white px-2.5 py-1 rounded-md transition shadow-2xs flex items-center gap-1"
+                  >
+                    {copiedCode === cpn.code ? (
+                      <>
+                        <CheckCircle className="w-3 h-3 text-white" />
+                        <span>Copied</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3 h-3 text-white" />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 3. TRENDING IN HYDERABAD CARD (Matching Screenshot) */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs space-y-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">

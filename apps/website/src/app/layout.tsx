@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
-<<<<<<< HEAD
-import { ToastProvider } from "@/components/ToastProvider";
-=======
 import { ToastProvider } from "@/components/Toast";
->>>>>>> feature/superadmin
 
 export const metadata: Metadata = {
   title: "HELLO — Discover Local. Connect Instantly.",
@@ -17,8 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="antialiased min-h-screen bg-[#F8FAFC]">
+    <html lang="en" suppressHydrationWarning>
+      <body className="antialiased min-h-screen bg-[#F8FAFC]" suppressHydrationWarning>
         <ToastProvider defaultPosition="top-right">
           {children}
         </ToastProvider>

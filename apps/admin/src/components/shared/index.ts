@@ -4,4 +4,4 @@ export * from "./PaginationControls";
 export * from "./Skeletons";
 export * from "./StateComponents";
 export * from "./AdminLayout";
-
+export * from "./MasterDataModule";

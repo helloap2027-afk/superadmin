@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CMSModule } from "@/components/cms/CMSModule";
+import { HelpCenterAdminModule } from "@/components/cms/HelpCenterAdminModule";
 import { AdminSidebar, AdminNavbar } from "@/components/navigation";
 
 export default function CMSDynamicPage() {
@@ -52,10 +53,14 @@ export default function CMSDynamicPage() {
 
         {/* CMS Isolated Workspace */}
         <div className="flex-1 h-[calc(100vh-76px)] overflow-y-auto">
-          <CMSModule
-            currentSlug={slugParam}
-            onNavigateSlug={(s) => router.push(`/cms/${s}`)}
-          />
+          {slugParam === "help-center" ? (
+            <HelpCenterAdminModule />
+          ) : (
+            <CMSModule
+              currentSlug={slugParam}
+              onNavigateSlug={(s) => router.push(`/cms/${s}`)}
+            />
+          )}
         </div>
       </div>
     </div>

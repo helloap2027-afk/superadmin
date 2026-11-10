@@ -23,6 +23,7 @@ import {
   Settings,
   ChevronDown,
   ChevronRight,
+  Headphones,
   LogOut,
   X
 } from "lucide-react";
@@ -56,15 +57,17 @@ export function AdminSidebar({
   const { logout } = useAdminProfile();
 
   // Expandable parent states (Single active accordion menu)
-  type OpenMenuType = "categories" | "users" | "payments" | "cms" | "ads" | "email" | "reports" | "settings" | null;
+  type OpenMenuType = "categories" | "users" | "payments" | "cms" | "ads" | "email" | "support" | "reports" | "settings" | null;
 
   // Derive initial active menu from current route
   const getInitialOpenMenu = (): OpenMenuType => {
+    if (pathname?.startsWith("/support")) return "support";
     if (pathname?.startsWith("/email-management")) return "email";
     if (pathname?.startsWith("/advertisements")) return "ads";
     if (pathname?.startsWith("/cms")) return "cms";
     if (pathname?.startsWith("/payments")) return "payments";
     if (pathname?.startsWith("/users")) return "users";
+    if (activeTab === "Support Management") return "support";
     if (activeTab === "Email Management") return "email";
     if (activeTab === "Advertisement Management") return "ads";
     if (activeTab === "CMS") return "cms";
@@ -183,19 +186,6 @@ export function AdminSidebar({
           </div>
         </button>
 
-        {/* 2. Listings */}
-        <button
-          type="button"
-          onClick={() => handleNavClick("Listings")}
-          className={navItemClass(isCurrentActive("Listings"))}
-          title={isCollapsed ? "Listings" : undefined}
-        >
-          <div className="flex items-center gap-3">
-            <Building2 className="w-[19px] h-[19px] shrink-0" />
-            {!isCollapsed && <span>Listings</span>}
-          </div>
-        </button>
-
         {/* 3. Categories (Expandable) */}
         <div>
           <button
@@ -221,16 +211,16 @@ export function AdminSidebar({
           {!isCollapsed && openMenu === "categories" && (
             <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-1 py-1 text-[13px]">
               <div
-                onClick={() => handleNavClick("Categories")}
+                onClick={() => handleNavClick("Categories", "/categories")}
                 className="py-1.5 px-2 text-white/70 hover:text-white cursor-pointer rounded-md hover:bg-white/5"
               >
                 All Categories
               </div>
               <div
-                onClick={() => handleNavClick("Categories")}
+                onClick={() => handleNavClick("Categories", "/categories/subcategories")}
                 className="py-1.5 px-2 text-white/70 hover:text-white cursor-pointer rounded-md hover:bg-white/5"
               >
-                Subcategories & Tags
+                Subcategories & Services
               </div>
             </div>
           )}
@@ -287,7 +277,7 @@ export function AdminSidebar({
                   : "text-white/75 hover:text-white hover:bg-white/5"
                   }`}
               >
-                Merchants
+                Business Partners
               </Link>
             </div>
           )}
@@ -438,6 +428,19 @@ export function AdminSidebar({
           )}
         </div>
 
+        {/* 11a. Coupons Direct Navigation */}
+        <button
+          type="button"
+          onClick={() => handleNavClick("Coupons", "/coupons")}
+          className={navItemClass(isCurrentActive("Coupons") || pathname === "/coupons" || pathname === "/advertisements/coupons")}
+          title={isCollapsed ? "Coupons" : undefined}
+        >
+          <div className="flex items-center gap-3">
+            <Ticket className="w-[19px] h-[19px] shrink-0 text-amber-400" />
+            {!isCollapsed && <span>Coupons</span>}
+          </div>
+        </button>
+
         {/* 11b. Advertisement Management (Expandable) */}
         <div>
           <button
@@ -541,6 +544,64 @@ export function AdminSidebar({
                     prefetch={true}
                     onClick={() => {
                       if (onSelectTab) onSelectTab("Email Management");
+                      onCloseMobile();
+                    }}
+                    className={`w-full text-left py-1.5 px-2.5 rounded-md transition-colors block truncate ${isSubActive
+                      ? "text-white font-semibold bg-white/15"
+                      : "text-white/75 hover:text-white hover:bg-white/5"
+                    }`}
+                  >
+                    {sub.title}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* 11d. Support Management (Enterprise Case Desk) */}
+        <div>
+          <button
+            type="button"
+            onClick={() => {
+              if (isCollapsed) onToggleCollapse();
+              toggleMenu("support");
+            }}
+            className={navItemClass(
+              activeTab === "Support Management" || pathname?.startsWith("/support")
+            )}
+            title={isCollapsed ? "Support Management" : undefined}
+          >
+            <div className="flex items-center gap-3">
+              <Headphones className="w-[19px] h-[19px] shrink-0 text-[#0076D7]" />
+              {!isCollapsed && <span>Support Desk</span>}
+            </div>
+            {!isCollapsed && (
+              <ChevronDown
+                className={`w-4 h-4 text-white/70 transition-transform duration-200 ${openMenu === "support" ? "rotate-180" : ""}`}
+              />
+            )}
+          </button>
+
+          {!isCollapsed && openMenu === "support" && (
+            <div className="ml-7 pl-3.5 mt-1 border-l border-white/20 space-y-0.5 py-1 text-[13px]">
+              {[
+                { title: "Overview & SLA", path: "/support/overview" },
+                { title: "All Support Tickets", path: "/support/tickets" },
+                { title: "Unassigned Queue", path: "/support/unassigned" },
+                { title: "Assigned to Me", path: "/support/assigned" },
+                { title: "Escalated Cases", path: "/support/escalations" },
+                { title: "Canned Responses", path: "/support/canned-responses" },
+                { title: "Support Settings", path: "/support/settings" },
+              ].map((sub) => {
+                const isSubActive = pathname === sub.path;
+                return (
+                  <Link
+                    key={sub.path}
+                    href={sub.path}
+                    prefetch={true}
+                    onClick={() => {
+                      if (onSelectTab) onSelectTab("Support Management");
                       onCloseMobile();
                     }}
                     className={`w-full text-left py-1.5 px-2.5 rounded-md transition-colors block truncate ${isSubActive

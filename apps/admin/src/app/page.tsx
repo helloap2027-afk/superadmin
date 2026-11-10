@@ -36,6 +36,7 @@ import { ProfileOverview } from "@/components/profile";
 import { PaymentsModule } from "@/components/payments/PaymentsModule";
 import { SubscriptionsModule } from "@/components/subscriptions/SubscriptionsModule";
 import { NotificationsModule } from "@/components/notifications/NotificationsModule";
+import { MasterDataModule } from "@/components/shared/MasterDataModule";
 
 const API_BASE = "http://localhost:4000/api/v1";
 
@@ -269,6 +270,10 @@ export default function AdminDashboardPage() {
         ) : activeTab === "Notifications" ? (
           <div className="flex-1 h-[calc(100vh-76px)] overflow-y-auto">
             <NotificationsModule onUnreadCountChange={setUnreadNotifsCount} />
+          </div>
+        ) : activeTab === "Categories" || activeTab === "Master Data" ? (
+          <div className="flex-1 h-[calc(100vh-76px)] overflow-y-auto">
+            <MasterDataModule />
           </div>
         ) : (
           <main

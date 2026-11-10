@@ -6,6 +6,7 @@ import {
   ChevronRight, Home, Phone, Mail, MapPin, Send, 
   MessageSquare, Clock, ShieldCheck, CheckCircle2, Loader2, Sparkles, Building2 
 } from "lucide-react";
+import { DesktopHeader } from "@/components/DesktopHeader";
 import { DesktopFooter } from "@/components/DesktopFooter";
 
 const API_BASE = "http://localhost:4000/api/v1";
@@ -54,47 +55,18 @@ export default function ContactUsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col justify-between">
-      {/* Top Navbar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-2xs">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 select-none">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#FF6B35] to-[#0076D7] flex items-center justify-center text-white font-black text-lg">
-              H
-            </div>
-            <div className="flex flex-col">
-              <div className="flex items-center text-lg font-black tracking-tight leading-none">
-                <span className="text-[#0076D7]">Hello</span>
-                <span className="text-[#FF6B35]">-Hi</span>
-              </div>
-              <span className="text-[8px] text-slate-400 font-semibold tracking-wide">
-                Search Local. Connect Instant.
-              </span>
-            </div>
-          </Link>
-
-          <div className="flex items-center gap-3 text-xs">
-            <Link href="/" className="text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-1 transition">
-              <Home className="w-3.5 h-3.5" />
-              <span>Home</span>
-            </Link>
-            <Link href="/about" className="text-slate-600 hover:text-slate-900 font-semibold transition">
-              About
-            </Link>
-            <Link href="/faq" className="text-slate-600 hover:text-slate-900 font-semibold transition">
-              FAQs
-            </Link>
-            <Link href="/contact" className="text-[#0076D7] font-bold transition">
-              Contact
-            </Link>
-            <Link
-              href="/"
-              className="bg-[#0076D7] hover:bg-blue-600 text-white font-bold px-3 py-1.5 rounded-full transition text-xs shadow-xs"
-            >
-              Explore Services →
-            </Link>
-          </div>
-        </div>
-      </header>
+            {/* Authoritative Homepage Header */}
+      <DesktopHeader
+        selectedCity="Hyderabad"
+        onSelectCity={() => {}}
+        selectedCategory={null}
+        onSelectCategory={() => {}}
+        searchQuery=""
+        onSearchChange={() => {}}
+        onOpenAddBusiness={() => {}}
+        onOpenLogin={() => {}}
+        isLoggedIn={false}
+      />
 
       {/* Main Content Area */}
       <main className="max-w-5xl mx-auto w-full px-4 sm:px-6 py-8 flex-1 space-y-10">

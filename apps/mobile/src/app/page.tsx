@@ -605,10 +605,8 @@ export default function MobileAppSimulator() {
   }, []);
 
   useEffect(() => {
-    if (mode === "vendor") {
-      fetchVendorProfile();
-    }
-  }, [mode, fetchVendorProfile]);
+    fetchVendorProfile();
+  }, [fetchVendorProfile]);
 
   const handleMobileSavePersonal = async () => {
     if (!vOwnerName || vOwnerName.trim().length < 2) {
@@ -1351,116 +1349,386 @@ export default function MobileAppSimulator() {
               )}
             </div>
           ) : activeTab === "Profile" ? (
-            /* ================= PROFILE TAB (LIVE DB IDENTITY) ================= */
-            <div className="p-4 space-y-4">
-              {currentUser ? (
-                <>
-                  <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center space-y-2 shadow-xs">
-                    <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#0076D7] to-sky-400 text-white flex items-center justify-center mx-auto text-xl font-bold shadow-md">
-                      {currentUser?.fullName?.charAt(0) || "U"}
+            /* ================= PROFILE TAB (LIVE DB IDENTITY & APPROVED DESIGN) ================= */
+            currentUser ? (
+              <div className="p-4 space-y-4">
+                <div className="bg-white rounded-2xl border border-slate-200 p-4 text-center space-y-2 shadow-xs">
+                  <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#0076D7] to-sky-400 text-white flex items-center justify-center mx-auto text-xl font-bold shadow-md">
+                    {currentUser?.fullName?.charAt(0) || "U"}
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-black text-slate-900">{currentUser.fullName}</h4>
+                    <p className="text-[11px] text-slate-500">{currentUser.phoneNumber} {currentUser.email ? `• ${currentUser.email}` : ""}</p>
+                  </div>
+                  <div className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified in SQLite Database
+                  </div>
+                </div>
+
+                {/* Real Database Fields Grid */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2.5 text-xs shadow-xs">
+                  <h5 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Database Record Attributes</h5>
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                      <span className="text-[9px] text-slate-400 block font-bold">USER ID</span>
+                      <span className="font-mono text-slate-800 font-bold truncate block">{currentUser.id}</span>
                     </div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900">{currentUser.fullName}</h4>
-                      <p className="text-[11px] text-slate-500">{currentUser.phoneNumber} {currentUser.email ? `• ${currentUser.email}` : ""}</p>
+                    <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                      <span className="text-[9px] text-slate-400 block font-bold">STATUS</span>
+                      <span className="text-emerald-600 font-bold block">{currentUser.status}</span>
                     </div>
-                    <div className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-emerald-200">
-                      <ShieldCheck className="w-3 h-3 text-emerald-600" /> Verified in SQLite Database
+                    <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                      <span className="text-[9px] text-slate-400 block font-bold">LANGUAGE</span>
+                      <span className="text-slate-800 font-bold block">{currentUser.preferredLanguage || "English"}</span>
+                    </div>
+                    <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
+                      <span className="text-[9px] text-slate-400 block font-bold">ROLES</span>
+                      <span className="text-[#0076D7] font-bold block">{Array.isArray(currentUser.roles) ? currentUser.roles.join(", ") : "CUSTOMER"}</span>
                     </div>
                   </div>
 
-                  {/* Real Database Fields Grid */}
-                  <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-2.5 text-xs shadow-xs">
-                    <h5 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Database Record Attributes</h5>
-                    <div className="grid grid-cols-2 gap-2 text-[11px]">
-                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-                        <span className="text-[9px] text-slate-400 block font-bold">USER ID</span>
-                        <span className="font-mono text-slate-800 font-bold truncate block">{currentUser.id}</span>
-                      </div>
-                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-                        <span className="text-[9px] text-slate-400 block font-bold">STATUS</span>
-                        <span className="text-emerald-600 font-bold block">{currentUser.status}</span>
-                      </div>
-                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-                        <span className="text-[9px] text-slate-400 block font-bold">LANGUAGE</span>
-                        <span className="text-slate-800 font-bold block">{currentUser.preferredLanguage || "English"}</span>
-                      </div>
-                      <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-                        <span className="text-[9px] text-slate-400 block font-bold">ROLES</span>
-                        <span className="text-[#0076D7] font-bold block">{Array.isArray(currentUser.roles) ? currentUser.roles.join(", ") : "CUSTOMER"}</span>
-                      </div>
-                    </div>
+                  <div className="pt-2">
+                    <button
+                      onClick={() => setShowRawDbJson(!showRawDbJson)}
+                      className="text-[11px] font-bold text-[#0076D7] hover:underline"
+                    >
+                      {showRawDbJson ? "▼ Hide SQL Table Entity" : "▶ View Raw Database SQL Entity"}
+                    </button>
+                    {showRawDbJson && (
+                      <pre className="mt-2 p-2.5 bg-slate-900 rounded-xl text-[10px] font-mono text-emerald-400 overflow-x-auto leading-relaxed border border-slate-800">
+                        {JSON.stringify(currentUser, null, 2)}
+                      </pre>
+                    )}
+                  </div>
 
-                    <div className="pt-2">
-                      <button
-                        onClick={() => setShowRawDbJson(!showRawDbJson)}
-                        className="text-[11px] font-bold text-[#0076D7] hover:underline"
-                      >
-                        {showRawDbJson ? "▼ Hide SQL Table Entity" : "▶ View Raw Database SQL Entity"}
-                      </button>
-                      {showRawDbJson && (
-                        <pre className="mt-2 p-2.5 bg-slate-900 rounded-xl text-[10px] font-mono text-emerald-400 overflow-x-auto leading-relaxed border border-slate-800">
-                          {JSON.stringify(currentUser, null, 2)}
-                        </pre>
-                      )}
-                    </div>
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
+                    <button
+                      onClick={handleMobileSignOut}
+                      className="text-xs font-bold text-red-600 hover:text-red-700"
+                    >
+                      Sign Out Session
+                    </button>
+                    <button
+                      onClick={() => setMode("vendor")}
+                      className="text-xs font-bold text-[#FF6B35] hover:underline"
+                    >
+                      Switch to Vendor Mode →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* ================= GUEST PROFILE — EXACT APPROVED IMAGE (BEFORE LOGIN) ================= */
+              <div>
+                {/* SECTION 1 — HELLO-HI BLUE BRANDED HEADER */}
+                <div className="bg-[#0076D7] pt-4 pb-5 px-4 rounded-b-[28px] relative overflow-hidden shadow-md">
+                  {/* Decorative background curves */}
+                  <div className="absolute -top-14 -right-12 w-44 h-44 rounded-full bg-[#0B1220]/25 pointer-events-none" />
+                  <div className="absolute -bottom-10 -left-8 w-36 h-36 rounded-full bg-[#FF6B35]/20 pointer-events-none" />
 
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
-                      <button
-                        onClick={handleMobileSignOut}
-                        className="text-xs font-bold text-red-600 hover:text-red-700"
-                      >
-                        Sign Out Session
-                      </button>
-                      <button
-                        onClick={() => setMode("vendor")}
-                        className="text-xs font-bold text-[#FF6B35] hover:underline"
-                      >
-                        Switch to Vendor Mode →
-                      </button>
+                  {/* Wordmark Branding */}
+                  <div className="text-center mb-3.5 relative z-10">
+                    <div className="flex items-center justify-center">
+                      <span className="text-2xl font-black text-white tracking-tight">Hello</span>
+                      <span className="text-2xl font-black text-[#FF6B35] tracking-tight">-Hi</span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-white/85 mt-0.5">
+                      Search Local. Connect Instant.
+                    </p>
+                  </div>
+
+                  {/* Header Controls Bar (Location Pill on Left, Notification Bell on Right - NO Partner Pill) */}
+                  <div className="flex items-center justify-between relative z-10">
+                    <button
+                      onClick={() => setShowCityDropdown(!showCityDropdown)}
+                      className="flex items-center gap-1.5 bg-white/20 hover:bg-white/25 border border-white/30 px-3 py-1.5 rounded-full text-white text-[11px] font-bold transition"
+                    >
+                      <MapPin className="w-3.5 h-3.5 text-white" />
+                      <span>{selectedCity} ({selectedLocality})</span>
+                      <ChevronDown className="w-3 h-3 text-white/80" />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        alert("Guest Notifications: Login to view personalized quotes, instant replies, and local business offers.");
+                      }}
+                      className="w-9 h-9 rounded-full border-1.5 border-white/60 bg-white/15 flex items-center justify-center text-white relative hover:bg-white/20 transition"
+                      title="Notifications"
+                    >
+                      <Bell className="w-4 h-4 text-white" />
+                      <span className="absolute top-0 right-0 w-3.5 h-3.5 rounded-full bg-[#FF6B35] text-[8px] font-black text-white flex items-center justify-center border border-[#0076D7]">
+                        1
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* BODY CONTAINER FOR SECTIONS 2-5 */}
+                <div className="p-4 space-y-3.5">
+                  {/* SECTION 2 — WELCOME TO HELLO-HI CARD */}
+                  <div className="bg-[#005FAE] rounded-3xl p-4 shadow-md text-white relative overflow-hidden">
+                    {/* Curved orange decorative accent in bottom right */}
+                    <div className="absolute -bottom-6 -right-6 w-24 h-24 rounded-full bg-[#FF6B35] pointer-events-none" />
+
+                    <div className="flex items-center justify-between relative z-10 gap-3">
+                      {/* Left: Silhouette Avatar & Texts */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm">
+                          <User className="w-7 h-7 text-[#0076D7]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-base font-black text-white leading-tight">Welcome to Hello-Hi</h4>
+                          <p className="text-[11px] text-white/90 font-medium mt-1 leading-snug">
+                            Login or Register to access your account, book services, manage enquiries and more.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Stacked Login and Register Buttons */}
+                      <div className="flex flex-col gap-2 shrink-0 w-22">
+                        <button
+                          onClick={() => {
+                            setAuthTab("login");
+                            setAuthStep("role");
+                            setAuthRole(null);
+                            setAuthModalOpen(true);
+                          }}
+                          className="w-full bg-white/20 hover:bg-white/30 border border-white/70 text-white py-1.5 px-3 rounded-xl text-[11px] font-black flex items-center justify-center gap-1 transition"
+                        >
+                          <LogIn className="w-3 h-3 text-white" />
+                          <span>Login</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setAuthTab("register");
+                            setAuthStep("role");
+                            setAuthRole(null);
+                            setAuthModalOpen(true);
+                          }}
+                          className="w-full bg-[#FF6B35] hover:bg-[#E5531E] text-white py-1.5 px-3 rounded-xl text-[11px] font-black flex items-center justify-center gap-1 shadow-sm transition"
+                        >
+                          <UserPlus className="w-3 h-3 text-white" />
+                          <span>Register</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </>
-              ) : (
-                /* Unauthenticated View */
-                <div className="space-y-4">
-                  <div className="bg-white rounded-2xl border border-slate-200 p-5 text-center space-y-3 shadow-xs">
-                    <div className="w-14 h-14 rounded-2xl bg-blue-50 text-[#0076D7] flex items-center justify-center mx-auto text-xl font-bold border border-blue-100">
-                      <User className="w-7 h-7 text-[#0076D7]" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-black text-slate-900">Sign In or Register</h4>
-                      <p className="text-[11px] text-slate-500">Access verified enquiries, your registered database identity, and vendor controls.</p>
+
+                  {/* SECTION 3 — GUEST ACCESS (EXACT 4 CARDS IN 2x2 GRID) */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-3 shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-[#0076D7]" />
+                      <h4 className="text-sm font-black text-slate-900">Guest Access</h4>
                     </div>
 
-                    <div className="flex items-center gap-2 pt-2">
-                      <button
-                        onClick={() => { setAuthTab("login"); setAuthStep("role"); setAuthRole(null); setAuthModalOpen(true); }}
-                        className="flex-1 bg-[#0076D7] hover:bg-[#005FAE] text-white py-2.5 rounded-xl text-xs font-bold transition shadow-xs flex items-center justify-center gap-1.5"
+                    <div className="grid grid-cols-2 gap-2.5">
+                      {/* Card 1: Browse Services */}
+                      <div
+                        onClick={() => setActiveTab("Services")}
+                        className="p-3 bg-slate-50/70 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl cursor-pointer transition space-y-1 shadow-2xs"
                       >
-                        <User className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-[#0076D7]" />
+                          <span className="text-xs font-black text-slate-900">Browse Services</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium leading-tight">
+                          Explore & book verified services
+                        </p>
+                      </div>
+
+                      {/* Card 2: View Plans */}
+                      <div
+                        onClick={() => {
+                          alert("HELLO-Hi Subscription Plans: Explore public verified customer & merchant subscription packages directly synced from the NestJS database.");
+                        }}
+                        className="p-3 bg-slate-50/70 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl cursor-pointer transition space-y-1 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-[#0076D7]" />
+                          <span className="text-xs font-black text-slate-900">View Plans</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium leading-tight">
+                          Check subscription plans
+                        </p>
+                      </div>
+
+                      {/* Card 3: Get Help */}
+                      <div
+                        onClick={() => {
+                          alert("HELLO-Hi Help Center: Instant answers regarding search, vendor verification, customer enquiries, and billing.");
+                        }}
+                        className="p-3 bg-slate-50/70 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl cursor-pointer transition space-y-1 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <HelpCircle className="w-4 h-4 text-[#FF6B35]" />
+                          <span className="text-xs font-black text-slate-900">Get Help</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium leading-tight">
+                          FAQs & support articles
+                        </p>
+                      </div>
+
+                      {/* Card 4: Stay Updated */}
+                      <div
+                        onClick={() => {
+                          alert("Stay Updated: Receive real-time announcements, festival discounts, and verified regional service alerts in your city.");
+                        }}
+                        className="p-3 bg-slate-50/70 hover:bg-blue-50/50 border border-slate-200/80 rounded-2xl cursor-pointer transition space-y-1 shadow-2xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Bell className="w-4 h-4 text-[#6366F1]" />
+                          <span className="text-xs font-black text-slate-900">Stay Updated</span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 font-medium leading-tight">
+                          Offers, updates & announcements
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* SECTION 4 — ACCOUNT ACTIONS (EXACT TWO BUTTONS IN ONE ROW) */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-3 shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-[#FF6B35]" />
+                      <h4 className="text-sm font-black text-slate-900">Account Actions</h4>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => {
+                          setAuthTab("login");
+                          setAuthStep("role");
+                          setAuthRole(null);
+                          setAuthModalOpen(true);
+                        }}
+                        className="bg-blue-50/80 hover:bg-blue-100 border border-blue-200 text-[#0076D7] py-2.5 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition shadow-2xs"
+                      >
+                        <LogIn className="w-4 h-4 text-[#0076D7]" />
                         <span>Login</span>
                       </button>
+
                       <button
-                        onClick={() => { setAuthTab("register"); setAuthStep("role"); setAuthRole(null); setAuthModalOpen(true); }}
-                        className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 py-2.5 rounded-xl text-xs font-bold transition border border-slate-200 flex items-center justify-center gap-1.5"
+                        onClick={() => {
+                          setAuthTab("register");
+                          setAuthStep("role");
+                          setAuthRole(null);
+                          setAuthModalOpen(true);
+                        }}
+                        className="bg-[#FF6B35] hover:bg-[#E5531E] text-white py-2.5 px-4 rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-sm transition"
                       >
+                        <UserPlus className="w-4 h-4 text-white" />
                         <span>Register</span>
                       </button>
                     </div>
                   </div>
 
-                  <div className="bg-blue-50/60 rounded-2xl border border-blue-100 p-3.5 text-xs text-blue-900 space-y-1">
-                    <span className="font-bold flex items-center gap-1.5 text-blue-800">
-                      <ShieldCheck className="w-4 h-4 text-[#0076D7]" />
-                      Real Database Persistence
-                    </span>
-                    <p className="text-[11px] text-blue-700/90 leading-relaxed">
-                      Registration stores relational records directly in SQLite / MariaDB (`users` & `otp_challenges` tables) with rate limits and cryptographic hashing.
-                    </p>
+                  {/* SECTION 5 — COMPANY & INFORMATION (EXACT FIVE ROWS) */}
+                  <div className="bg-white rounded-2xl border border-slate-200 p-3.5 space-y-3 shadow-2xs">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-[#0076D7]" />
+                      <h4 className="text-sm font-black text-slate-900">Company & Information</h4>
+                    </div>
+
+                    <div className="space-y-2">
+                      {/* Row 1: About Hello-Hi */}
+                      <div
+                        onClick={() => {
+                          alert("About Hello-Hi: Mission, pillars & verified discovery engine connecting customers with authentic local service providers across India.");
+                        }}
+                        className="p-2.5 bg-slate-50/70 hover:bg-blue-50/40 rounded-xl border border-slate-100 flex items-center justify-between cursor-pointer transition"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-blue-100/60 flex items-center justify-center text-[#0076D7]">
+                            <Info className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-black text-slate-900 block leading-tight">About Hello-Hi</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Mission, pillars & verified discovery engine</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+
+                      {/* Row 2: Frequently Asked Questions (FAQ) */}
+                      <div
+                        onClick={() => {
+                          alert("Frequently Asked Questions (FAQ): Instant answers about booking services, requesting 15-min instant quotes, and verified business badges.");
+                        }}
+                        className="p-2.5 bg-slate-50/70 hover:bg-blue-50/40 rounded-xl border border-slate-100 flex items-center justify-between cursor-pointer transition"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-pink-100/60 flex items-center justify-center text-pink-600">
+                            <HelpCircle className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-black text-slate-900 block leading-tight">Frequently Asked Questions (FAQ)</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Instant answers about verification & quotes</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+
+                      {/* Row 3: Terms & Conditions */}
+                      <div
+                        onClick={() => {
+                          alert("Terms & Conditions: Platform usage policies, merchant service standards, customer protections, and fair discovery guidelines.");
+                        }}
+                        className="p-2.5 bg-slate-50/70 hover:bg-blue-50/40 rounded-xl border border-slate-100 flex items-center justify-between cursor-pointer transition"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-amber-100/60 flex items-center justify-center text-amber-600">
+                            <FileText className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-black text-slate-900 block leading-tight">Terms & Conditions</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Platform rules, merchant & customer policy</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+
+                      {/* Row 4: Contact Us & Support */}
+                      <div
+                        onClick={() => {
+                          alert("Contact Us & Support: Toll-free merchant helpline, 24/7 WhatsApp helpdesk, and database enquiry escalation.");
+                        }}
+                        className="p-2.5 bg-slate-50/70 hover:bg-blue-50/40 rounded-xl border border-slate-100 flex items-center justify-between cursor-pointer transition"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-orange-100/60 flex items-center justify-center text-[#FF6B35]">
+                            <Phone className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-black text-slate-900 block leading-tight">Contact Us & Support</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Toll-free, WhatsApp desk & DB enquiry form</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+
+                      {/* Row 5: Privacy Policy (DPDP Act 2023) */}
+                      <div
+                        onClick={() => {
+                          alert("Privacy Policy (DPDP Act 2023): Strict end-to-end data minimization, cryptographic storage, and India DPDP 2023 compliance.");
+                        }}
+                        className="p-2.5 bg-slate-50/70 hover:bg-blue-50/40 rounded-xl border border-slate-100 flex items-center justify-between cursor-pointer transition"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-100/60 flex items-center justify-center text-indigo-600">
+                            <Shield className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="text-xs font-black text-slate-900 block leading-tight">Privacy Policy (DPDP Act 2023)</span>
+                            <span className="text-[10px] text-slate-500 font-medium">Data minimization & encryption protections</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )
           ) : mode === "customer" ? (
             /* ================= CUSTOMER MODE VIEW ================= */
             <div className="space-y-3.5">

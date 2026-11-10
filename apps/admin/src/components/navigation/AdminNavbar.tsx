@@ -31,7 +31,7 @@ export function AdminNavbar({
   onToggleSidebar,
   searchQuery = "",
   onSearchChange,
-  unreadNotifications = 12,
+  unreadNotifications: initialUnread,
   selectedLocation = "Hyderabad",
   onSelectLocation,
   adminName = "Admin User",
@@ -46,6 +46,25 @@ export function AdminNavbar({
   const [currentCity, setCurrentCity] = useState(selectedLocation);
   const [imgError, setImgError] = useState(false);
   const [navNotifs, setNavNotifs] = useState<any[]>([]);
+  const [liveUnreadCount, setLiveUnreadCount] = useState<number>(initialUnread ?? 0);
+
+  // Dynamically fetch live unread notifications count from backend
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const res = await fetch("http://localhost:4000/api/v1/notifications/counts");
+        const json = await res.json();
+        if (json?.success && json.data) {
+          setLiveUnreadCount(json.data.adminUnread ?? json.data.totalUnread ?? 0);
+        }
+      } catch {}
+    };
+    fetchCounts();
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const unreadNotifications = liveUnreadCount;
 
   useEffect(() => {
     if (isNotificationsOpen) {

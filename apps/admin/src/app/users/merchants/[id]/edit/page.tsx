@@ -232,15 +232,15 @@ export default function MerchantEditPage() {
 
       const json = await res.json();
       if (json.success) {
-        setSuccessMsg("Merchant details updated successfully in database!");
+        setSuccessMsg("Business Partner details updated successfully in database!");
         setTimeout(() => {
           router.push(`/users/merchants/${id}`);
         }, 1200);
       } else {
-        setError(json.message || "Failed to update merchant");
+        setError(json.message || "Failed to update business partner");
       }
     } catch (err: any) {
-      setError(err?.message || "Error saving merchant");
+      setError(err?.message || "Error saving business partner");
     } finally {
       setSaving(false);
     }
@@ -256,7 +256,7 @@ export default function MerchantEditPage() {
             href={`/users/merchants/${id}`}
             className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600 hover:text-blue-600 transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> Back to Merchant View
+            <ArrowLeft className="w-4 h-4" /> Back to Business Partner View
           </Link>
           <span className="text-xs text-slate-400 font-mono">ID: {id}</span>
         </div>
@@ -265,7 +265,7 @@ export default function MerchantEditPage() {
         {loading ? (
           <div className="bg-white rounded-3xl p-12 border border-slate-200 text-center space-y-3">
             <RefreshCw className="w-6 h-6 animate-spin text-blue-600 mx-auto" />
-            <p className="text-xs text-slate-500 font-medium">Loading merchant profile form...</p>
+            <p className="text-xs text-slate-500 font-medium">Loading business partner profile form...</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -1118,7 +1118,7 @@ export default function MerchantEditPage() {
                 className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-xs disabled:opacity-50"
               >
                 {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                <span>Save Merchant Profile</span>
+                <span>Save Business Partner Profile</span>
               </button>
             </div>
 

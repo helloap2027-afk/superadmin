@@ -5,7 +5,7 @@ import {
   Filter, CheckCircle2, Star, Clock, MapPin, RotateCcw, 
   Tag, Shield, Sparkles
 } from "lucide-react";
-import { AP_LOCALITIES_MAP } from "../data/exploreData";
+import { AP_LOCALITIES_MAP, AP_EXPLORE_CATEGORIES } from "../data/exploreData";
 
 export interface DesktopFilterSidebarProps {
   selectedCity: "Hyderabad" | "Vijayawada" | "Guntur";
@@ -54,7 +54,7 @@ export function DesktopFilterSidebar({
   const isAllListings = !verifiedOnly && !openNowOnly && !dealsOnly && !minRating;
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm space-y-5 max-h-[calc(100vh-8.5rem)] overflow-y-auto overscroll-contain">
+    <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs space-y-5 sticky top-28">
       
       {/* 1. Header: Filters + Results Count + Reset All */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -178,17 +178,39 @@ export function DesktopFilterSidebar({
         <span className="text-[10px] font-black uppercase tracking-wider text-slate-900 block">
           COMMERCIAL CATEGORIES
         </span>
-        <button
-          onClick={() => onSelectCategory(null)}
-          className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition border ${
-            selectedCategory === null
-              ? "bg-blue-50 text-[#0076D7] border-blue-200"
-              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
-          }`}
-        >
-          <span>🌟</span>
-          <span>All Categories</span>
-        </button>
+        <div className="space-y-1">
+          <button
+            onClick={() => onSelectCategory(null)}
+            className={`w-full text-left px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition border ${
+              selectedCategory === null
+                ? "bg-blue-50 text-[#0076D7] border-blue-200"
+                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            <span>🌟</span>
+            <span>All Categories</span>
+          </button>
+          {AP_EXPLORE_CATEGORIES.map((cat) => {
+            const isCatActive = selectedCategory === cat.slug;
+            return (
+              <button
+                key={cat.slug}
+                onClick={() => onSelectCategory(isCatActive ? null : cat.slug)}
+                className={`w-full text-left px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center justify-between transition border ${
+                  isCatActive
+                    ? "bg-blue-50 text-[#0076D7] border-blue-200 font-bold"
+                    : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                }`}
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <span className="text-sm shrink-0">{cat.icon}</span>
+                  <span className="truncate">{cat.name}</span>
+                </div>
+                {isCatActive && <span className="text-xs text-[#0076D7]">●</span>}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
     </div>

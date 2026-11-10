@@ -34,5 +34,10 @@ export const CMS_SUBMENUS: CMSMenuItem[] = [
     slug: "contact-support",
     title: "Contact & Support",
     description: "Manage official grievance emails, phone lines, and regional Andhra Pradesh headquarters."
+  },
+  {
+    slug: "help-center",
+    title: "Help Center Management",
+    description: "Manage Customer & Business Partner Help Categories, Articles, Support Channels and Tickets."
   }
 ];
